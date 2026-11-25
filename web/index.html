@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TAURUS - IT Support Management System</title>
+    <!-- Google Fonts: Roboto & Roboto Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+      /* ========================================================
+         ULTRA HIGH-CONTRAST & BRIGHT TEXT UNTUK DARK MODE
+         Sangat terang, tajam, dan mudah dibaca oleh mata manusia!
+         ======================================================== */
+      html.dark,
+      html.dark body {
+        color: #f8fafc !important;
+      }
+
+      /* Judul H1 - H6 selalu Kuning Emas Cerah */
+      html.dark h1, html.dark h2, html.dark h3, html.dark h4, html.dark h5, html.dark h6,
+      html.dark .MuiTypography-h1, html.dark .MuiTypography-h2, html.dark .MuiTypography-h3,
+      html.dark .MuiTypography-h4, html.dark .MuiTypography-h5, html.dark .MuiTypography-h6,
+      html.dark .text-navy-or-yellow {
+        color: #ffd600 !important;
+        text-shadow: 0 0 10px rgba(255, 214, 0, 0.25);
+      }
+
+      /* Semua teks di dalam Table Cell & Baris Tabel */
+      html.dark .MuiTableCell-root {
+        color: #f8fafc !important;
+      }
+      html.dark .MuiTableCell-body {
+        color: #ffffff !important;
+      }
+      html.dark .MuiTableCell-head {
+        color: #00ff66 !important;
+        background-color: #0a1220 !important;
+      }
+
+      /* Teks paragraf, deskripsi, sub-judul, caption */
+      html.dark .MuiTypography-root:not(.MuiChip-label):not([class*="MuiChip-"]):not(h1):not(h2):not(h3):not(h4):not(h5):not(h6):not(.MuiTypography-h1):not(.MuiTypography-h2):not(.MuiTypography-h3):not(.MuiTypography-h4):not(.MuiTypography-h5):not(.MuiTypography-h6):not(.MuiTypography-subtitle1):not(.MuiTypography-subtitle2):not(.MuiTypography-caption) {
+        color: #f8fafc;
+      }
+      html.dark .MuiTypography-body1 {
+        color: #f8fafc !important;
+      }
+      html.dark .MuiTypography-body2 {
+        color: #e2e8f0 !important;
+      }
+      html.dark .MuiTypography-subtitle1,
+      html.dark .MuiTypography-subtitle2 {
+        color: #ffd600 !important;
+      }
+      html.dark .MuiTypography-caption {
+        color: #cbd5e1 !important;
+      }
+
+      /* Native tags */
+      html.dark p, html.dark label, html.dark li, html.dark dt, html.dark dd {
+        color: #f8fafc;
+      }
+      html.dark strong, html.dark b {
+        color: #ffffff;
+      }
+
+      /* Card Headers & Dialog Titles */
+      html.dark .MuiCardHeader-title {
+        color: #ffd600 !important;
+      }
+      html.dark .MuiCardHeader-subheader {
+        color: #cbd5e1 !important;
+      }
+      html.dark .MuiDialogTitle-root {
+        color: #ffd600 !important;
+      }
+      html.dark .MuiDialogContentText-root {
+        color: #e2e8f0 !important;
+      }
+
+      /* List item text */
+      html.dark .MuiListItemText-primary {
+        color: #ffffff !important;
+      }
+      html.dark .MuiListItemText-secondary {
+        color: #cbd5e1 !important;
+      }
+
+      /* Paksa timpa semua hardcoded dark colors di inline style / CSS */
+      html.dark [style*="#1a237e"], html.dark [style*="rgb(26, 35, 126)"],
+      html.dark [style*="#002171"], html.dark [style*="rgb(0, 33, 113)"],
+      html.dark [style*="#283593"], html.dark [style*="rgb(40, 53, 147)"] {
+        color: #ffd600 !important;
+      }
+
+      html.dark [style*="#1e293b"], html.dark [style*="rgb(30, 41, 59)"],
+      html.dark [style*="#0f172a"], html.dark [style*="rgb(15, 23, 42)"],
+      html.dark [style*="#334155"], html.dark [style*="rgb(51, 65, 85)"] {
+        color: #ffffff !important;
+      }
+
+      html.dark [style*="#475569"], html.dark [style*="rgb(71, 85, 105)"],
+      html.dark [style*="#64748b"], html.dark [style*="rgb(100, 116, 139)"],
+      html.dark [style*="#6b7280"], html.dark [style*="rgb(107, 114, 128)"],
+      html.dark [style*="#94a3b8"], html.dark [style*="rgb(148, 163, 184)"] {
+        color: #e2e8f0 !important;
+      }
+
+      /* Form inputs, labels, and placeholders */
+      html.dark .MuiFormLabel-root {
+        color: #cbd5e1 !important;
+      }
+      html.dark .MuiFormHelperText-root {
+        color: #cbd5e1 !important;
+      }
+      html.dark .MuiInputBase-input {
+        color: #ffffff !important;
+      }
+
+      /* Pastikan teks chip yang punya warna border/custom tidak tertimpa */
+      html.dark .MuiChip-root:not([style*="color:"]) .MuiChip-label {
+        color: inherit;
+      }
+
+      /* ========================================================
+         MODAL PREVIEW CETAK & EXPORT (HARUS SELALU KERTAS PUTIH & TEKS HITAM)
+         Sempurna baik di Light Mode maupun Dark Mode ("HACKER ON")
+         ======================================================== */
+      .print-preview-modal .MuiDialog-paper,
+      #print-preview-paper {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .print-preview-modal .MuiTableCell-root,
+      .print-preview-modal .MuiTableCell-body,
+      .print-preview-modal td,
+      .print-preview-modal th,
+      .print-preview-modal p,
+      .print-preview-modal span,
+      .print-preview-modal div {
+        color: #000000 !important;
+      }
+      .print-preview-modal .MuiTableCell-head {
+        color: #000000 !important;
+        background-color: #f1f5f9 !important;
+      }
+      .print-preview-modal [style*="background-color: #fde047"],
+      .print-preview-modal [style*="bgcolor: #fde047"],
+      .print-preview-modal [bgcolor="#fde047"] {
+        background-color: #fde047 !important;
+        color: #000000 !important;
+      }
+      .print-preview-modal [style*="background-color: #86efac"],
+      .print-preview-modal [style*="bgcolor: #86efac"],
+      .print-preview-modal [bgcolor="#86efac"] {
+        background-color: #86efac !important;
+        color: #000000 !important;
+      }
+
+      /* Print / PDF Styling Khusus Form Inspeksi Resmi */
+      @media print {
+        @page {
+          size: landscape;
+          margin: 6mm;
+        }
+        body {
+          background: #ffffff !important;
+          color: #000000 !important;
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+        /* Sembunyikan SEMUA elemen aplikasi background (#root) saat print agar tidak bocor / overlap */
+        #root,
+        header,
+        nav,
+        aside,
+        .MuiDrawer-root,
+        .MuiAppBar-root,
+        #floating-chat-container,
+        .no-print,
+        .MuiDialogTitle-root,
+        .MuiDialogActions-root {
+          display: none !important;
+          visibility: hidden !important;
+        }
+        .MuiBackdrop-root {
+          display: none !important;
+        }
+        .MuiDialog-container {
+          display: block !important;
+          height: auto !important;
+        }
+        .MuiDialog-paper {
+          box-shadow: none !important;
+          margin: 0 !important;
+          max-width: 100% !important;
+          width: 100% !important;
+          border: none !important;
+          position: static !important;
+          background: #ffffff !important;
+          color: #000000 !important;
+          overflow: visible !important;
+        }
+        .MuiDialogContent-root {
+          padding: 0 !important;
+          overflow: visible !important;
+        }
+        table {
+          page-break-inside: auto;
+        }
+        tr {
+          page-break-inside: avoid;
+          page-break-after: auto;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

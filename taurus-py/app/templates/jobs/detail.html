@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Job #{{ job.job_number }} - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Detail Job Teknisi #{{ job.job_number }}{% endblock %}
+{% block active_page %}jobs{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-4xl mx-auto">
+  
+  <div class="flex items-center justify-between">
+    <a href="/taurus-py/jobs" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+      <span class="material-symbols-outlined text-base">arrow_back</span>
+      <span>Kembali ke Daftar Job</span>
+    </a>
+    <span class="px-3 py-1 rounded-full text-xs font-extrabold {% if job.status == 'completed' %}bg-emerald-100 text-emerald-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+      STATUS: {{ job.status | upper }}
+    </span>
+  </div>
+
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="border-b border-slate-100 pb-4 mb-5">
+      <h2 class="text-xl font-extrabold text-slate-900 leading-snug">{{ job.problem_category }}</h2>
+      <p class="text-xs text-slate-400 mt-1">Dicatat pada {{ job.created_at.strftime('%d %B %Y pukul %H:%M') if job.created_at else '' }}</p>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 mb-6 text-xs">
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Teknisi Pelaksana</p>
+        <p class="font-bold text-purple-700 mt-0.5">{{ job.technician.name if job.technician else '-' }}</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Unit Kendaraan</p>
+        <p class="font-bold text-slate-800 mt-0.5">{{ job.vehicle_unit.unit_number if job.vehicle_unit else 'Tidak Ada' }}</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Tiket Terkait</p>
+        <p class="font-bold text-slate-800 mt-0.5">{{ job.ticket.ticket_number if job.ticket else 'Mandiri' }}</p>
+      </div>
+    </div>
+
+    <div class="space-y-4">
+      <div>
+        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Deskripsi Masalah:</h4>
+        <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+          {{ job.problem_description }}
+        </div>
+      </div>
+
+      <div>
+        <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Tindakan / Solusi yang Dikerjakan:</h4>
+        <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-200/60 text-xs text-slate-800 leading-relaxed whitespace-pre-wrap">
+          {{ job.action_taken or 'Belum ada tindakan tercatat' }}
+        </div>
+      </div>
+    </div>
+
+    <!-- Update Job Status & Action Form (For Technicians) -->
+    {% if current_user.role in ['admin', 'it_support', 'technician'] %}
+    <div class="mt-6 pt-5 border-t border-slate-100">
+      <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Update Tindakan & Status Pekerjaan:</h4>
+      <form method="POST" action="/taurus-py/jobs/{{ job.id }}/update" class="space-y-3">
+        <textarea name="action_taken" rows="2" placeholder="Tambahkan catatan tindakan terbaru..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl p-3 text-xs text-slate-800 focus:outline-none">{{ job.action_taken or '' }}</textarea>
+        
+        <div class="flex items-center gap-3">
+          <select name="status" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none">
+            <option value="in_progress" {% if job.status == 'in_progress' %}selected{% endif %}>IN PROGRESS (Masih Dikerjakan)</option>
+            <option value="completed" {% if job.status == 'completed' %}selected{% endif %}>COMPLETED (Pekerjaan Selesai)</option>
+            <option value="pending" {% if job.status == 'pending' %}selected{% endif %}>PENDING (Menunggu Sparepart/Kendaraan)</option>
+          </select>
+          <button type="submit" class="px-4 py-2 bg-purple-700 hover:bg-purple-600 text-white font-bold rounded-xl text-xs transition">
+            Simpan Pembaruan
+          </button>
+        </div>
+      </form>
+    </div>
+    {% endif %}
+
+  </div>
+
+</div>
+{% endblock %}

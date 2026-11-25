@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Job Baru - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Form Tambah Job Pekerjaan Teknisi{% endblock %}
+{% block active_page %}job_create{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="flex items-center gap-3 pb-5 border-b border-slate-100 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-purple-500/10 text-purple-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">post_add</span>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800">Catat Job Teknisi Baru</h3>
+        <p class="text-xs text-slate-400">Teknisi pelaksana otomatis: <b class="text-purple-600">{{ current_user.name or current_user.username }}</b></p>
+      </div>
+    </div>
+
+    <form method="POST" action="/taurus-py/jobs/create" class="space-y-4">
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kategori Masalah / Perbaikan <span class="text-red-500">*</span></label>
+        <input type="text" name="problem_category" required placeholder="Contoh: Instalasi Radio Rig, Perbaikan Dascam, Setting Jaringan"
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Unit Kendaraan Terkait</label>
+          <select name="vehicle_unit_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Tidak Terkait Unit --</option>
+            {% for u in vehicle_units %}
+            <option value="{{ u.id }}">{{ u.unit_number }} - {{ u.brand or '' }} ({{ u.department or 'Umum' }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Terkait Tiket Masuk</label>
+          <select name="ticket_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Job Mandiri (Tanpa Tiket) --</option>
+            {% for t in open_tickets %}
+            <option value="{{ t.id }}">{{ t.ticket_number }} - {{ t.subject }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Deskripsi Permasalahan / Pekerjaan <span class="text-red-500">*</span></label>
+        <textarea name="problem_description" rows="3" required placeholder="Jelaskan kondisi awal, kerusakan yang ditemukan, atau ruang lingkup pekerjaan..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold"></textarea>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Tindakan / Solusi yang Dikerjakan</label>
+        <textarea name="action_taken" rows="3" placeholder="Tindakan teknis yang sudah dilakukan (misal: ganti kabel antenna, reset modul, dll)..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold"></textarea>
+      </div>
+
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <a href="/taurus-py/jobs" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Batal</a>
+        <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-base">save</span>
+          <span>Simpan Job Teknisi</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

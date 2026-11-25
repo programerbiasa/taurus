@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Dashboard Ringkasan Sistem{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Welcome Banner -->
+  <div class="p-6 rounded-3xl bg-gradient-to-r from-taurus-navy via-slate-900 to-slate-800 border border-taurus-gold/30 text-white shadow-xl relative overflow-hidden">
+    <div class="relative z-10 max-w-2xl">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold mb-3">
+        <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+        <span>TAURUS Python Fullstack Engine</span>
+      </div>
+      <h2 class="text-2xl font-extrabold text-white tracking-wide">Selamat Datang, {{ current_user.name or current_user.username }}!</h2>
+      <p class="text-sm text-slate-300 mt-1 leading-relaxed">
+        Sistem manajemen IT Support, Job Teknisi, Radio Komunikasi, dan Dascam Kendaraan terintegrasi secara real-time.
+      </p>
+    </div>
+  </div>
+
+  <!-- KPI Metric Cards Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+    <!-- Card 1: Total Tiket -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Tiket</p>
+        <h3 class="text-2xl font-extrabold text-slate-800 mt-1">{{ total_tickets }}</h3>
+        <p class="text-[11px] text-slate-500 mt-0.5">Semua riwayat</p>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">confirmation_number</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Tiket Aktif / Open -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-amber-600 uppercase tracking-wider">Tiket Aktif</p>
+        <h3 class="text-2xl font-extrabold text-amber-600 mt-1">{{ open_tickets }}</h3>
+        <p class="text-[11px] text-amber-700/70 mt-0.5">Menunggu respon</p>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">pending_actions</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Job Teknisi -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Job Teknisi</p>
+        <h3 class="text-2xl font-extrabold text-slate-800 mt-1">{{ total_jobs }}</h3>
+        <p class="text-[11px] text-slate-500 mt-0.5">{{ completed_jobs }} Selesai</p>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-purple-50 text-purple-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">assignment</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Radio Unit -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Master Radio</p>
+        <h3 class="text-2xl font-extrabold text-slate-800 mt-1">{{ total_radios }}</h3>
+        <p class="text-[11px] text-emerald-600 mt-0.5 font-medium">{{ active_radios }} Terpasang</p>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">radio</span>
+      </div>
+    </div>
+
+    <!-- Card 5: Dascam Fleet -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+      <div>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Dascam Fleet</p>
+        <h3 class="text-2xl font-extrabold text-slate-800 mt-1">{{ total_dashcams }}</h3>
+        <p class="text-[11px] text-sky-600 mt-0.5 font-medium">{{ active_dashcams }} Terpasang</p>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">videocam</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Two Column Layout: Recent Tickets & Recent Jobs -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <!-- Left: Tiket Terbaru -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-amber-600">confirmation_number</span>
+          <h3 class="font-bold text-slate-800 text-sm">Tiket Terbaru</h3>
+        </div>
+        <a href="/taurus-py/tickets" class="text-xs font-bold text-amber-600 hover:text-amber-700">Lihat Semua →</a>
+      </div>
+      <div class="divide-y divide-slate-100 flex-1 overflow-y-auto max-h-96">
+        {% if recent_tickets %}
+          {% for t in recent_tickets %}
+          <div class="p-4 hover:bg-slate-50 transition flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-extrabold text-taurus-navy bg-slate-100 px-2 py-0.5 rounded">{{ t.ticket_number }}</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full {% if t.status == 'open' %}bg-amber-100 text-amber-800{% elif t.status == 'in_progress' %}bg-blue-100 text-blue-800{% elif t.status == 'resolved' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-700{% endif %}">
+                  {{ t.status | upper }}
+                </span>
+                {% if t.vehicle_unit %}
+                <span class="text-xs font-bold text-slate-500">Unit: {{ t.vehicle_unit.unit_number }}</span>
+                {% endif %}
+              </div>
+              <h4 class="text-xs font-bold text-slate-800 truncate">{{ t.subject }}</h4>
+              <p class="text-[11px] text-slate-400 mt-0.5">Pelapor: {{ t.reporter.name if t.reporter else '-' }} • {{ t.created_at.strftime('%d/%m/%Y %H:%M') if t.created_at else '' }}</p>
+            </div>
+            <a href="/taurus-py/tickets/{{ t.id }}" class="p-2 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-slate-100">
+              <span class="material-symbols-outlined text-lg">chevron_right</span>
+            </a>
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="p-8 text-center text-slate-400 text-xs">Belum ada tiket yang diajukan.</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Right: Job Teknisi Terbaru -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
+      <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-purple-600">assignment</span>
+          <h3 class="font-bold text-slate-800 text-sm">Job Teknisi Terbaru</h3>
+        </div>
+        {% if current_user.role in ['admin', 'it_support', 'technician'] %}
+        <a href="/taurus-py/jobs" class="text-xs font-bold text-purple-600 hover:text-purple-700">Lihat Semua →</a>
+        {% endif %}
+      </div>
+      <div class="divide-y divide-slate-100 flex-1 overflow-y-auto max-h-96">
+        {% if recent_jobs %}
+          {% for j in recent_jobs %}
+          <div class="p-4 hover:bg-slate-50 transition flex items-center justify-between gap-3">
+            <div class="min-w-0 flex-1">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="text-xs font-extrabold text-taurus-navy bg-slate-100 px-2 py-0.5 rounded">{{ j.job_number }}</span>
+                <span class="text-[11px] font-bold px-2 py-0.5 rounded-full {% if j.status == 'completed' %}bg-emerald-100 text-emerald-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                  {{ j.status | upper }}
+                </span>
+                {% if j.vehicle_unit %}
+                <span class="text-xs font-bold text-slate-500">Unit: {{ j.vehicle_unit.unit_number }}</span>
+                {% endif %}
+              </div>
+              <h4 class="text-xs font-bold text-slate-800 truncate">{{ j.problem_category }}</h4>
+              <p class="text-[11px] text-slate-500 truncate mt-0.5">{{ j.problem_description }}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">Teknisi: {{ j.technician.name if j.technician else '-' }} • {{ j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '' }}</p>
+            </div>
+            {% if current_user.role in ['admin', 'it_support', 'technician'] %}
+            <a href="/taurus-py/jobs/{{ j.id }}" class="p-2 text-slate-400 hover:text-purple-600 rounded-lg hover:bg-slate-100">
+              <span class="material-symbols-outlined text-lg">chevron_right</span>
+            </a>
+            {% endif %}
+          </div>
+          {% endfor %}
+        {% else %}
+          <div class="p-8 text-center text-slate-400 text-xs">Belum ada job teknisi tercatat.</div>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

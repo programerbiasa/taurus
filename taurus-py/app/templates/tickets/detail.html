@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Detail Tiket #{{ ticket.ticket_number }} - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Detail Tiket Gangguan #{{ ticket.ticket_number }}{% endblock %}
+{% block active_page %}tickets{% endblock %}
+
+{% block content %}
+<div class="space-y-6 max-w-4xl mx-auto">
+  
+  <!-- Back Button & Actions Bar -->
+  <div class="flex items-center justify-between">
+    <a href="/taurus-py/tickets" class="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-slate-800 transition">
+      <span class="material-symbols-outlined text-base">arrow_back</span>
+      <span>Kembali ke Daftar Tiket</span>
+    </a>
+    <span class="px-3 py-1 rounded-full text-xs font-extrabold {% if ticket.status == 'open' %}bg-amber-100 text-amber-800{% elif ticket.status == 'in_progress' %}bg-blue-100 text-blue-800{% elif ticket.status == 'resolved' %}bg-emerald-100 text-emerald-800{% else %}bg-slate-100 text-slate-700{% endif %}">
+      STATUS: {{ ticket.status | upper }}
+    </span>
+  </div>
+
+  <!-- Ticket Main Info Card -->
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="border-b border-slate-100 pb-4 mb-5">
+      <h2 class="text-xl font-extrabold text-slate-900 leading-snug">{{ ticket.subject }}</h2>
+      <p class="text-xs text-slate-400 mt-1">Dibuat pada {{ ticket.created_at.strftime('%d %B %Y pukul %H:%M') if ticket.created_at else '' }}</p>
+    </div>
+
+    <!-- Info Grid -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 mb-6 text-xs">
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Pelapor</p>
+        <p class="font-bold text-slate-800 mt-0.5">{{ ticket.reporter.name if ticket.reporter else '-' }}</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Unit Kendaraan</p>
+        <p class="font-bold text-slate-800 mt-0.5">{{ ticket.vehicle_unit.unit_number if ticket.vehicle_unit else 'Tidak Ada' }}</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Kategori</p>
+        <p class="font-bold text-slate-800 mt-0.5">{{ ticket.category.name if ticket.category else '-' }}</p>
+      </div>
+      <div>
+        <p class="font-bold text-slate-400 uppercase text-[10px]">Prioritas</p>
+        <p class="font-bold text-slate-800 mt-0.5" style="color: {{ ticket.priority.color or '#000' }};">{{ ticket.priority.name if ticket.priority else '-' }}</p>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div>
+      <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Deskripsi Gangguan:</h4>
+      <div class="p-4 bg-slate-50 rounded-2xl border border-slate-200/80 text-xs text-slate-700 leading-relaxed whitespace-pre-wrap">
+        {{ ticket.description }}
+      </div>
+    </div>
+
+    <!-- Staff Actions (Status Update) -->
+    {% if current_user.role in ['admin', 'it_support', 'technician'] %}
+    <div class="mt-6 pt-5 border-t border-slate-100">
+      <h4 class="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">Ubah Status Tiket (Staff IT):</h4>
+      <form method="POST" action="/taurus-py/tickets/{{ ticket.id }}/status" class="flex flex-wrap items-center gap-3">
+        <select name="status" class="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none focus:border-taurus-gold">
+          <option value="open" {% if ticket.status == 'open' %}selected{% endif %}>OPEN (Baru)</option>
+          <option value="in_progress" {% if ticket.status == 'in_progress' %}selected{% endif %}>IN PROGRESS (Sedang Ditangani)</option>
+          <option value="resolved" {% if ticket.status == 'resolved' %}selected{% endif %}>RESOLVED (Selesai)</option>
+          <option value="closed" {% if ticket.status == 'closed' %}selected{% endif %}>CLOSED (Ditutup)</option>
+        </select>
+        <button type="submit" class="px-4 py-2 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs transition">
+          Perbarui Status
+        </button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Comments / Discussion Stream -->
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-5">
+    <div class="flex items-center gap-2 pb-3 border-b border-slate-100">
+      <span class="material-symbols-outlined text-amber-600">forum</span>
+      <h3 class="font-extrabold text-slate-800 text-sm">Riwayat & Diskusi Komentar Tiket</h3>
+    </div>
+
+    <!-- Comment List -->
+    <div class="space-y-4">
+      {% if ticket.comments %}
+        {% for c in ticket.comments %}
+        <div class="p-4 rounded-2xl bg-slate-50 border border-slate-200/70 text-xs">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-bold text-slate-800">{{ c.user.name if c.user else 'User' }} <span class="font-normal text-slate-400">({{ c.user.role if c.user else '' }})</span></span>
+            <span class="text-[10px] text-slate-400">{{ c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else '' }}</span>
+          </div>
+          <p class="text-slate-700 whitespace-pre-wrap leading-relaxed">{{ c.comment }}</p>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p class="text-slate-400 text-xs text-center py-4">Belum ada komentar pada tiket ini.</p>
+      {% endif %}
+    </div>
+
+    <!-- Add Comment Form -->
+    <form method="POST" action="/taurus-py/tickets/{{ ticket.id }}/comment" class="pt-4 border-t border-slate-100 space-y-3">
+      <textarea name="comment" rows="3" required placeholder="Tulis tanggapan atau catatan penanganan..."
+        class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-2xl p-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold"></textarea>
+      <div class="flex justify-end">
+        <button type="submit" class="px-4 py-2 bg-gradient-to-r from-amber-600 to-taurus-gold text-slate-950 font-bold rounded-xl text-xs transition shadow-sm">
+          Kirim Komentar
+        </button>
+      </div>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

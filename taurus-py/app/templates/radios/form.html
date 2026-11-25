@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if radio else 'Tambah' }} Radio - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}{{ 'Ubah Data' if radio else 'Tambah Master' }} Radio Komunikasi{% endblock %}
+{% block active_page %}radios{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="flex items-center gap-3 pb-5 border-b border-slate-100 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">radio</span>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800">{{ 'Ubah Data' if radio else 'Tambah Master' }} Radio</h3>
+        <p class="text-xs text-slate-400">Pastikan nomor serial number unik dan akurat</p>
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="mb-5 p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-600 text-xs font-medium">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" action="{{ '/taurus-py/radios/' ~ radio.id ~ '/edit' if radio else '/taurus-py/radios/create' }}" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nomor Serial (Serial Number) <span class="text-red-500">*</span></label>
+          <input type="text" name="serial_number" required value="{{ radio.serial_number if radio else '' }}" placeholder="Contoh: SN-RD-9821"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-taurus-gold">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Frekuensi Kerja</label>
+          <input type="text" name="frequency" value="{{ radio.frequency if radio else '142.500 MHz' }}" placeholder="Contoh: 142.500 MHz / UHF"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Merk / Vendor</label>
+          <input type="text" name="brand" value="{{ radio.brand if radio else 'Motorola' }}" placeholder="Contoh: Motorola, Icom, Hytera"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Tipe / Model</label>
+          <input type="text" name="model" value="{{ radio.model if radio else 'XiR M3688 / CP1660' }}" placeholder="Contoh: XiR M3688"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kondisi / Status Perangkat</label>
+          <select name="status" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="baik" {% if radio and radio.status == 'baik' %}selected{% endif %}>BAIK (Siap Pakai)</option>
+            <option value="rusak" {% if radio and radio.status == 'rusak' %}selected{% endif %}>RUSAK (Perlu Perbaikan)</option>
+            <option value="perbaikan" {% if radio and radio.status == 'perbaikan' %}selected{% endif %}>DALAM PERBAIKAN</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Terpasang di Unit Kendaraan</label>
+          <select name="unit_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Standby di Pool / Workshop --</option>
+            {% for u in vehicle_units %}
+            <option value="{{ u.id }}" {% if radio and radio.unit_id == u.id %}selected{% endif %}>{{ u.unit_number }} ({{ u.brand or '' }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Foto Radio Upload -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Unggah Foto Radio</label>
+        <input type="file" name="photo" accept="image/*"
+          class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-amber-50 file:text-amber-700 hover:file:bg-amber-100">
+        {% if radio and radio.photo_url %}
+        <div class="mt-2 flex items-center gap-2">
+          <img src="{{ radio.photo_url }}" alt="Foto" class="w-12 h-12 object-cover rounded-lg border">
+          <span class="text-[11px] text-slate-400">Foto tersimpan</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Catatan Tambahan</label>
+        <textarea name="notes" rows="2" placeholder="Catatan kondisi fisik, kelengkapan mic, bracket, antenna..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">{{ radio.notes if radio else '' }}</textarea>
+      </div>
+
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <a href="/taurus-py/radios" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Batal</a>
+        <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-taurus-gold text-slate-950 font-bold rounded-xl text-xs shadow-md transition">
+          {{ 'Simpan Perubahan' if radio else 'Simpan Data Radio' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

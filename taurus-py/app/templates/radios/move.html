@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+
+{% block title %}Pindah Radio / Mutasi Unit - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Form Pemindahan Radio Antar Unit Kendaraan{% endblock %}
+{% block active_page %}radios{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="flex items-center gap-3 pb-5 border-b border-slate-100 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">swap_horiz</span>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800">Mutasi / Pindah Radio Unit</h3>
+        <p class="text-xs text-slate-400">Teknisi pemindah otomatis tercatat dari akun login: <b class="text-amber-600">{{ current_user.name or current_user.username }}</b></p>
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="mb-5 p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-600 text-xs font-medium">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/taurus-py/radios/move" class="space-y-4">
+      <!-- Pilih Radio -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Pilih Perangkat Radio (Serial Number) <span class="text-red-500">*</span></label>
+        <select name="radio_id" required class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+          <option value="">-- Pilih Radio yang akan Dipindahkan --</option>
+          {% for r in radios %}
+          <option value="{{ r.id }}" {% if selected_radio_id == r.id %}selected{% endif %}>
+            SN: {{ r.serial_number }} - {{ r.brand or '' }} {{ r.model or '' }} (Saat ini di: {{ r.unit.unit_number if r.unit else 'Pool/Workshop' }})
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Unit Tujuan -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Pindahkan ke Unit Kendaraan Tujuan <span class="text-red-500">*</span></label>
+        <select name="to_unit_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+          <option value="">-- Bongkar / Simpan di Pool (Workshop) --</option>
+          {% for u in vehicle_units %}
+          <option value="{{ u.id }}">{{ u.unit_number }} ({{ u.brand or '' }} {{ u.model or '' }} - {{ u.department or 'Umum' }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Teknisi Info (Read-only Auto from Login) -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nama Teknisi Pelaksana (Otomatis dari Akun Login)</label>
+        <input type="text" value="{{ current_user.name or current_user.username }} ({{ current_user.role | upper }})" readonly
+          class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 cursor-not-allowed">
+      </div>
+
+      <!-- Alasan / Catatan Pemindahan -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Alasan / Catatan Mutasi</label>
+        <textarea name="notes" rows="3" required placeholder="Contoh: Unit lama masuk workshop breakdown, radio dipindahkan ke unit cadangan operasional..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none"></textarea>
+      </div>
+
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <a href="/taurus-py/radios" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Batal</a>
+        <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-taurus-gold text-slate-950 font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-base">swap_horiz</span>
+          <span>Proses Pemindahan Radio</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

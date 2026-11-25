@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Buat Tiket Baru - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Form Pengajuan Tiket Gangguan{% endblock %}
+{% block active_page %}ticket_create{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="flex items-center gap-3 pb-5 border-b border-slate-100 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">add_circle</span>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800">Buat Tiket Baru</h3>
+        <p class="text-xs text-slate-400">Laporkan kendala IT, Radio Komunikasi, atau Dascam Kendaraan</p>
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="mb-5 p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-600 text-xs font-medium">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" action="/taurus-py/tickets/create" class="space-y-4">
+      <!-- Subjek -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Subjek / Judul Kendala <span class="text-red-500">*</span></label>
+        <input type="text" name="subject" required placeholder="Contoh: Radio HT tidak bisa transmit, Dascam mati"
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold">
+      </div>
+
+      <!-- Grid Kategori & Prioritas -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kategori Masalah</label>
+          <select name="category_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Pilih Kategori --</option>
+            {% for c in categories %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Tingkat Prioritas</label>
+          <select name="priority_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Pilih Prioritas --</option>
+            {% for p in priorities %}
+            <option value="{{ p.id }}">{{ p.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Unit Kendaraan -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nomor Unit Kendaraan (Jika ada)</label>
+        <select name="vehicle_unit_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+          <option value="">-- Tidak Terkait Unit / Ruangan Kantor --</option>
+          {% for u in vehicle_units %}
+          <option value="{{ u.id }}">{{ u.unit_number }} - {{ u.brand or '' }} {{ u.model or '' }} ({{ u.department or 'Umum' }})</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Deskripsi Detail -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Deskripsi Lengkap Kendala <span class="text-red-500">*</span></label>
+        <textarea name="description" rows="4" required placeholder="Jelaskan secara detail gejala masalah, lokasi kendaraan/perangkat, dan waktu kejadian..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold"></textarea>
+      </div>
+
+      <!-- Submit Buttons -->
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <a href="/taurus-py/tickets" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Batal</a>
+        <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-amber-600 to-taurus-gold hover:from-amber-500 hover:to-amber-600 text-slate-950 font-bold rounded-xl text-xs shadow-md transition flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-base">send</span>
+          <span>Kirim Tiket Gangguan</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

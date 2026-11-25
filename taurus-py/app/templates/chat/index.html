@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Messenger & Diskusi IT - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Messenger & Diskusi Tim (Real-time){% endblock %}
+{% block active_page %}chat{% endblock %}
+
+{% block content %}
+<div class="h-[calc(100vh-130px)] bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden flex flex-col md:flex-row">
+  
+  <!-- Left Column: Contact & Channels List -->
+  <div class="w-full md:w-80 bg-slate-50 border-r border-slate-200 flex flex-col h-full flex-shrink-0">
+    <!-- Channel Broadcast Paling Atas -->
+    <div class="p-3 border-b border-amber-200/60 bg-amber-50/50">
+      <a href="/taurus-py/chat?channel=broadcast" class="flex items-center gap-3 p-2.5 rounded-2xl transition {% if active_channel == 'broadcast' %}bg-amber-500 text-white shadow-md{% else %}hover:bg-amber-100/70 text-slate-800{% endif %}">
+        <div class="w-10 h-10 rounded-xl bg-amber-600 text-white flex items-center justify-center font-bold flex-shrink-0 shadow">
+          <span class="material-symbols-outlined text-xl">campaign</span>
+        </div>
+        <div class="overflow-hidden flex-1">
+          <h4 class="text-xs font-extrabold truncate">📢 Chat Bersama</h4>
+          <p class="text-[10px] {% if active_channel == 'broadcast' %}text-amber-100{% else %}text-slate-500{% endif %} truncate">Diskusi grup seluruh anggota</p>
+        </div>
+      </a>
+    </div>
+
+    <!-- Contact List Header -->
+    <div class="px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+      <span>Kontak Pengguna</span>
+      <span>{{ members | length }} Orang</span>
+    </div>
+
+    <!-- Contact Items List -->
+    <div class="flex-1 overflow-y-auto divide-y divide-slate-100">
+      {% for m in members %}
+      <a href="/taurus-py/chat?target_user_id={{ m.id }}" class="flex items-center gap-3 p-3 transition hover:bg-slate-100 {% if active_target_user and active_target_user.id == m.id %}bg-slate-200/80 border-l-4 border-taurus-gold{% endif %}">
+        <div class="w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-xs flex-shrink-0 shadow-sm
+          {% if m.role == 'admin' %}bg-amber-600{% elif m.role in ['it_support', 'technician'] %}bg-sky-600{% else %}bg-slate-600{% endif %}">
+          {{ (m.name or m.username)[0] | upper }}
+        </div>
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center justify-between">
+            <h5 class="text-xs font-bold text-slate-800 truncate">{{ m.name or m.username }}</h5>
+            <span class="text-[9px] px-1.5 py-0.2 rounded font-extrabold {% if m.role == 'admin' %}bg-amber-100 text-amber-800{% elif m.role in ['it_support', 'technician'] %}bg-sky-100 text-sky-800{% else %}bg-slate-200 text-slate-700{% endif %}">
+              {{ 'Admin' if m.role == 'admin' else ('IT' if m.role in ['it_support', 'technician'] else 'Client') }}
+            </span>
+          </div>
+          <p class="text-[10px] text-slate-400 truncate mt-0.5">@{{ m.username }}</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Right Column: Active Chat Thread -->
+  <div class="flex-1 flex flex-col h-full bg-white">
+    <!-- Header Conversation -->
+    <div class="p-3.5 sm:px-6 bg-slate-900 border-b border-taurus-gold/30 flex items-center justify-between text-white">
+      <div class="flex items-center gap-3">
+        {% if active_channel == 'broadcast' %}
+          <div class="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-bold shadow">
+            <span class="material-symbols-outlined text-2xl">campaign</span>
+          </div>
+          <div>
+            <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
+              <span>📢 Chat Bersama (Grup Publik)</span>
+            </h3>
+            <p class="text-[10px] text-taurus-goldLight">Semua Admin, IT Support, dan Client dapat saling berkomunikasi</p>
+          </div>
+        {% elif active_target_user %}
+          <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm shadow
+            {% if active_target_user.role == 'admin' %}bg-amber-600{% elif active_target_user.role in ['it_support', 'technician'] %}bg-sky-600{% else %}bg-slate-600{% endif %}">
+            {{ (active_target_user.name or active_target_user.username)[0] | upper }}
+          </div>
+          <div>
+            <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
+              <span>{{ active_target_user.name or active_target_user.username }}</span>
+              <span class="text-[10px] px-1.5 py-0.2 rounded font-extrabold bg-slate-800 text-amber-300 border border-amber-400/30">
+                {{ active_target_user.role | upper }}
+              </span>
+            </h3>
+            <p class="text-[10px] text-emerald-400 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Percakapan Pribadi (Direct Message)</span>
+            </p>
+          </div>
+        {% else %}
+          <h3 class="text-sm font-bold text-slate-300">Pilih Percakapan</h3>
+        {% endif %}
+      </div>
+
+      <!-- Test Sound Klunting Button in Header -->
+      <button onclick="playKluntingSound()" title="Tes Suara Klunting" class="p-2 rounded-xl text-amber-300 hover:bg-slate-800 transition">
+        <span class="material-symbols-outlined text-lg">notifications_active</span>
+      </button>
+    </div>
+
+    <!-- Message Bubble Stream -->
+    <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 sm:p-6 space-y-3 bg-slate-50">
+      {% if messages %}
+        {% for msg in messages %}
+          {% set is_me = (msg.user_id == current_user.id) %}
+          <div class="flex flex-col {% if is_me %}items-end{% else %}items-start{% endif %}">
+            {% if not is_me and active_channel == 'broadcast' %}
+            <span class="text-[10px] font-bold text-slate-500 mb-0.5 px-1">{{ msg.sender_name }} ({{ msg.sender_role | upper }})</span>
+            {% endif %}
+            <div class="max-w-[75%] rounded-2xl px-4 py-2.5 text-xs shadow-sm leading-relaxed {% if is_me %}bg-taurus-navy text-white rounded-br-none border border-taurus-gold/30{% else %}bg-white text-slate-800 rounded-bl-none border border-slate-200{% endif %}">
+              <p class="whitespace-pre-wrap">{{ msg.message }}</p>
+            </div>
+            <span class="text-[9px] text-slate-400 mt-0.5 px-1">{{ msg.created_at.strftime('%H:%M') if msg.created_at else '' }}</span>
+          </div>
+        {% endfor %}
+      {% else %}
+        <div class="h-full flex flex-col items-center justify-center text-slate-400 text-xs">
+          <span class="material-symbols-outlined text-4xl mb-2 text-slate-300">chat</span>
+          <p>Belum ada pesan pada percakapan ini. Mulai percakapan sekarang!</p>
+        </div>
+      {% endif %}
+      <div id="messagesBottom"></div>
+    </div>
+
+    <!-- Input Form -->
+    <form id="chatForm" onsubmit="sendChatMessage(event)" class="p-3 sm:p-4 bg-white border-t border-slate-200 flex items-center gap-2">
+      <input type="hidden" id="isBroadcast" value="{{ 'true' if active_channel == 'broadcast' else 'false' }}">
+      <input type="hidden" id="targetUserId" value="{{ active_target_user.id if active_target_user else '' }}">
+
+      <input type="text" id="chatInput" required placeholder="Tulis pesan Anda di sini (tekan Enter untuk kirim)..."
+        class="flex-1 bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-2xl px-4 py-2.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-taurus-gold">
+
+      <button type="submit" class="p-2.5 bg-gradient-to-r from-amber-600 to-taurus-gold hover:from-amber-500 hover:to-amber-600 text-slate-950 font-bold rounded-2xl transition shadow-md flex-shrink-0 flex items-center justify-center">
+        <span class="material-symbols-outlined text-lg">send</span>
+      </button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Auto scroll to bottom
+  const container = document.getElementById('messagesContainer');
+  if (container) {
+    container.scrollTop = container.scrollHeight;
+  }
+
+  async function sendChatMessage(e) {
+    e.preventDefault();
+    const input = document.getElementById('chatInput');
+    const msg = input.value.trim();
+    if (!msg) return;
+
+    const isBroadcast = document.getElementById('isBroadcast').value === 'true';
+    const targetUserId = document.getElementById('targetUserId').value;
+
+    input.value = '';
+
+    try {
+      const response = await fetch('/taurus-py/api/chat/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: msg,
+          is_broadcast: isBroadcast,
+          target_user_id: targetUserId ? parseInt(targetUserId) : null
+        })
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Append locally
+        appendMessage(data, true);
+      }
+    } catch(err) {
+      console.error('Error sending message:', err);
+    }
+  }
+
+  function appendMessage(msg, isMe) {
+    const container = document.getElementById('messagesContainer');
+    if (!container) return;
+
+    const bubble = document.createElement('div');
+    bubble.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+    bubble.innerHTML = `
+      <div class="max-w-[75%] rounded-2xl px-4 py-2.5 text-xs shadow-sm leading-relaxed ${isMe ? 'bg-taurus-navy text-white rounded-br-none border border-taurus-gold/30' : 'bg-white text-slate-800 rounded-bl-none border border-slate-200'}">
+        <p class="whitespace-pre-wrap">${escapeHtml(msg.message)}</p>
+      </div>
+      <span class="text-[9px] text-slate-400 mt-0.5 px-1">Baru saja</span>
+    `;
+    container.appendChild(bubble);
+    container.scrollTop = container.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.innerText = text;
+    return div.innerHTML;
+  }
+
+  // Handle incoming live message for current thread
+  if (window.socket) {
+    const origHandler = window.socket.onmessage;
+    window.socket.onmessage = (event) => {
+      if (origHandler) origHandler(event);
+      try {
+        const data = JSON.parse(event.data);
+        if (data.type === 'chat') {
+          const msg = data.payload;
+          const isBroadcast = document.getElementById('isBroadcast').value === 'true';
+          const targetUserId = document.getElementById('targetUserId').value;
+
+          if (isBroadcast && msg.is_broadcast && Number(msg.user_id) !== Number({{ current_user.id }})) {
+            appendMessage(msg, false);
+          } else if (!isBroadcast && Number(msg.user_id) === Number(targetUserId)) {
+            appendMessage(msg, false);
+          }
+        }
+      } catch(e) {}
+    };
+  }
+</script>
+{% endblock %}

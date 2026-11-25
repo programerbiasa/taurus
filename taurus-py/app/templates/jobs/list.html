@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Daftar Job Teknisi - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}Daftar Pekerjaan / Job Teknisi IT & Radio{% endblock %}
+{% block active_page %}jobs{% endblock %}
+
+{% block content %}
+<div class="space-y-5">
+  
+  <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
+    <div class="flex items-center gap-2">
+      <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Job Tercatat: <b class="text-slate-800">{{ jobs | length }}</b></span>
+    </div>
+
+    {% if current_user.role in ['it_support', 'technician'] %}
+    <a href="/taurus-py/jobs/create" class="px-4 py-2 bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-bold rounded-xl text-xs flex items-center gap-2 shadow-md transition">
+      <span class="material-symbols-outlined text-base">post_add</span>
+      <span>Buat Job Baru</span>
+    </a>
+    {% endif %}
+  </div>
+
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left text-xs">
+        <thead class="bg-slate-50 text-slate-500 uppercase tracking-wider font-extrabold border-b border-slate-200">
+          <tr>
+            <th class="px-5 py-3.5">Nomor Job</th>
+            <th class="px-5 py-3.5">Kategori Masalah</th>
+            <th class="px-5 py-3.5">Unit Kendaraan</th>
+            <th class="px-5 py-3.5">Deskripsi & Solusi</th>
+            <th class="px-5 py-3.5">Teknisi</th>
+            <th class="px-5 py-3.5">Status</th>
+            <th class="px-5 py-3.5 text-right">Aksi</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-slate-700 font-medium">
+          {% if jobs %}
+            {% for j in jobs %}
+            <tr class="hover:bg-slate-50/80 transition">
+              <td class="px-5 py-3.5 font-bold text-taurus-navy">
+                <a href="/taurus-py/jobs/{{ j.id }}" class="hover:text-purple-600 hover:underline">
+                  {{ j.job_number }}
+                </a>
+                <span class="text-[10px] text-slate-400 font-normal block">{{ j.created_at.strftime('%d/%m/%Y %H:%M') if j.created_at else '' }}</span>
+              </td>
+              <td class="px-5 py-3.5 font-bold text-slate-800">
+                {{ j.problem_category }}
+              </td>
+              <td class="px-5 py-3.5">
+                {% if j.vehicle_unit %}
+                  <span class="px-2.5 py-1 rounded-lg bg-slate-100 font-bold text-slate-700 border border-slate-200">
+                    {{ j.vehicle_unit.unit_number }}
+                  </span>
+                {% else %}
+                  <span class="text-slate-400">-</span>
+                {% endif %}
+              </td>
+              <td class="px-5 py-3.5 max-w-xs">
+                <p class="font-bold text-slate-700 truncate">{{ j.problem_description }}</p>
+                <p class="text-[11px] text-emerald-600 truncate">{{ j.action_taken or 'Belum ada tindakan tercatat' }}</p>
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="font-bold text-slate-800">{{ j.technician.name if j.technician else '-' }}</span>
+              </td>
+              <td class="px-5 py-3.5">
+                <span class="px-2.5 py-1 rounded-full text-[11px] font-extrabold {% if j.status == 'completed' %}bg-emerald-100 text-emerald-800{% else %}bg-purple-100 text-purple-800{% endif %}">
+                  {{ j.status | upper }}
+                </span>
+              </td>
+              <td class="px-5 py-3.5 text-right">
+                <a href="/taurus-py/jobs/{{ j.id }}" class="px-3 py-1.5 bg-slate-100 hover:bg-taurus-navy hover:text-white rounded-lg text-slate-700 text-xs font-bold transition inline-flex items-center gap-1">
+                  <span>Detail</span>
+                  <span class="material-symbols-outlined text-sm">visibility</span>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="7" class="px-5 py-10 text-center text-slate-400">
+                Belum ada data job teknisi yang tercatat.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

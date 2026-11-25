@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit' if dashcam else 'Tambah' }} Dascam - {{ app_name or 'TAURUS' }}{% endblock %}
+{% block header_title %}{{ 'Ubah Data' if dashcam else 'Tambah Master' }} Dascam Kendaraan{% endblock %}
+{% block active_page %}dashcams{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+  <div class="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 sm:p-8">
+    <div class="flex items-center gap-3 pb-5 border-b border-slate-100 mb-6">
+      <div class="w-10 h-10 rounded-2xl bg-sky-500/10 text-sky-600 flex items-center justify-center font-bold">
+        <span class="material-symbols-outlined text-2xl">videocam</span>
+      </div>
+      <div>
+        <h3 class="text-base font-extrabold text-slate-800">{{ 'Ubah Data' if dashcam else 'Tambah Master' }} Dascam</h3>
+        <p class="text-xs text-slate-400">Konfigurasi spesifikasi dan kondisi perangkat dascam armada</p>
+      </div>
+    </div>
+
+    {% if error %}
+    <div class="mb-5 p-3.5 rounded-xl bg-red-500/20 border border-red-500/40 text-red-600 text-xs font-medium">
+      {{ error }}
+    </div>
+    {% endif %}
+
+    <form method="POST" enctype="multipart/form-data" action="{{ '/taurus-py/dashcams/' ~ dashcam.id ~ '/edit' if dashcam else '/taurus-py/dashcams/create' }}" class="space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Nomor Serial (Serial Number) <span class="text-red-500">*</span></label>
+          <input type="text" name="serial_number" required value="{{ dashcam.serial_number if dashcam else '' }}" placeholder="Contoh: DC-HIK-8901"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-taurus-gold">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Merk / Vendor</label>
+          <select name="brand_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Pilih Merk / Vendor --</option>
+            {% for b in brands %}
+            <option value="{{ b.id }}" {% if dashcam and dashcam.brand_id == b.id %}selected{% endif %}>{{ b.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Provider Internet SIM</label>
+          <input type="text" name="sim_provider" value="{{ dashcam.sim_provider if dashcam else 'Telkomsel' }}" placeholder="Contoh: Telkomsel / Indosat / XL"
+            class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Unit Kendaraan Terpasang</label>
+          <select name="unit_id" class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">
+            <option value="">-- Standby di Pool / Workshop --</option>
+            {% for u in vehicle_units %}
+            <option value="{{ u.id }}" {% if dashcam and dashcam.unit_id == u.id %}selected{% endif %}>{{ u.unit_number }} ({{ u.brand or '' }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <!-- Kondisi Listrik, GPS, dan Status Kamera -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kondisi Listrik</label>
+          <select name="power_status" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none">
+            <option value="baik" {% if not dashcam or dashcam.power_status == 'baik' %}selected{% endif %}>BAIK</option>
+            <option value="rusak" {% if dashcam and dashcam.power_status == 'rusak' %}selected{% endif %}>RUSAK</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Kondisi GPS</label>
+          <select name="gps_status" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none">
+            <option value="baik" {% if not dashcam or dashcam.gps_status == 'baik' %}selected{% endif %}>BAIK</option>
+            <option value="rusak" {% if dashcam and dashcam.gps_status == 'rusak' %}selected{% endif %}>RUSAK</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Status Kamera</label>
+          <select name="camera_status" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:outline-none">
+            <option value="aktif" {% if not dashcam or dashcam.camera_status == 'aktif' %}selected{% endif %}>AKTIF</option>
+            <option value="tidak_aktif" {% if dashcam and dashcam.camera_status == 'tidak_aktif' %}selected{% endif %}>TIDAK AKTIF</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Fitur Kamera Opsi Centang (Kamera Depan, Kabin, Fatigue) -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-2">Kelengkapan Kamera (Centang yang aktif):</label>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+            <input type="checkbox" name="has_front_camera" {% if not dashcam or dashcam.has_front_camera %}checked{% endif %} class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500">
+            <span>Kamera Depan</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+            <input type="checkbox" name="has_cabin_camera" {% if not dashcam or dashcam.has_cabin_camera %}checked{% endif %} class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500">
+            <span>Kamera Kabin</span>
+          </label>
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+            <input type="checkbox" name="has_fatigue_camera" {% if dashcam and dashcam.has_fatigue_camera %}checked{% endif %} class="w-4 h-4 rounded text-sky-600 focus:ring-sky-500">
+            <span>Kamera Fatigue (Sensor Lelah)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Foto Dascam Upload -->
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Unggah Foto Dascam</label>
+        <input type="file" name="photo" accept="image/*"
+          class="w-full text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-sky-50 file:text-sky-700 hover:file:bg-sky-100">
+        {% if dashcam and dashcam.photo_url %}
+        <div class="mt-2 flex items-center gap-2">
+          <img src="{{ dashcam.photo_url }}" alt="Foto" class="w-12 h-12 object-cover rounded-lg border">
+          <span class="text-[11px] text-slate-400">Foto tersimpan</span>
+        </div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">Catatan Tambahan</label>
+        <textarea name="notes" rows="2" placeholder="Catatan instalasi, nomor kartu SIM, kabel daya..."
+          class="w-full bg-slate-50 border border-slate-200 focus:border-taurus-gold rounded-xl px-4 py-2.5 text-xs text-slate-800 focus:outline-none">{{ dashcam.notes if dashcam else '' }}</textarea>
+      </div>
+
+      <div class="pt-4 flex items-center justify-end gap-3 border-t border-slate-100">
+        <a href="/taurus-py/dashcams" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs transition">Batal</a>
+        <button type="submit" class="px-5 py-2.5 bg-gradient-to-r from-sky-600 to-sky-500 text-white font-bold rounded-xl text-xs shadow-md transition">
+          {{ 'Simpan Perubahan' if dashcam else 'Simpan Data Dascam' }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
