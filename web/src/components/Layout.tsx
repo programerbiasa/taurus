@@ -40,8 +40,6 @@ import {
   AssignmentTurnedIn as InspectIcon,
   PlaylistAddCheck as AddInspectIcon,
   Inventory2Outlined as InventoryIcon,
-  MoveToInbox as MoveInIcon,
-  Outbox as MoveOutIcon,
   DarkMode as DarkModeIcon,
   LightMode as LightModeIcon,
 } from '@mui/icons-material';
@@ -211,8 +209,6 @@ export const Layout: React.FC = () => {
       { text: 'Radio', path: '/radios', icon: <RadioIcon /> },
       { text: 'Dascam', path: '/dashcams', icon: <DashcamIcon /> },
       { text: 'Master Barang', path: '/inventory', icon: <InventoryIcon /> },
-      { text: 'Barang Masuk', path: '/inventory/in', icon: <MoveInIcon /> },
-      { text: 'Barang Keluar', path: '/inventory/out', icon: <MoveOutIcon /> },
       { text: 'Tambah Inspeksi', path: '/inspections/create', icon: <AddInspectIcon /> },
       { text: 'Rekap Inspeksi', path: '/inspections', icon: <InspectIcon /> },
     ];
@@ -227,8 +223,6 @@ export const Layout: React.FC = () => {
       { text: 'Radio', path: '/radios', icon: <RadioIcon /> },
       { text: 'Dascam', path: '/dashcams', icon: <DashcamIcon /> },
       { text: 'Master Barang', path: '/inventory', icon: <InventoryIcon /> },
-      { text: 'Barang Masuk', path: '/inventory/in', icon: <MoveInIcon /> },
-      { text: 'Barang Keluar', path: '/inventory/out', icon: <MoveOutIcon /> },
       { text: 'Tambah Inspeksi', path: '/inspections/create', icon: <AddInspectIcon /> },
       { text: 'Rekap Inspeksi', path: '/inspections', icon: <InspectIcon /> },
       { text: 'Pengaturan User', path: '/users', icon: <PeopleIcon /> },

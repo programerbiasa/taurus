@@ -42,11 +42,7 @@ import {
   Delete as DeleteIcon,
   Visibility as ViewIcon,
   Inventory2Outlined as InventoryIcon,
-  MoveToInbox as InboxIcon,
-  Outbox as OutboxIcon,
   Settings as SettingsIcon,
-  SwapHoriz as TransferIcon,
-  AssignmentTurnedIn as ReturnIcon,
   Refresh as RefreshIcon,
   LocationOn as LocationIcon,
   Person as PersonIcon,
@@ -56,7 +52,6 @@ import {
   Warning as WarningIcon,
   Cancel as CancelIcon,
   DeleteSweep as ScrapIcon,
-  History as HistoryIcon,
   Close as CloseIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -65,14 +60,12 @@ import socket from '../socket';
 import { useAppTheme } from '../ThemeContext';
 import {
   InventoryItem,
-  InventoryTransaction,
   InventoryLocation,
   InventoryPic,
   InventoryCategory,
   InventoryBrand,
   InventoryType,
   ItemCondition,
-  ItemStatus,
 } from '../types';
 
 export const InventoryManagement: React.FC = () => {
@@ -86,30 +79,13 @@ export const InventoryManagement: React.FC = () => {
   const currentUser = userJson ? JSON.parse(userJson) : { name: 'User', role: 'client' };
   const isClient = currentUser.role === 'client';
 
-  // Determine active Tab based on URL
-  // /inventory -> 0 (Master Barang)
-  // /inventory/in -> 1 (Barang Masuk)
-  // /inventory/out -> 2 (Barang Keluar)
-  // /inventory/settings -> 3 (Kelola Master Data)
-  const getInitialTab = () => {
-    if (location.pathname.includes('/in')) return 1;
-    if (location.pathname.includes('/out')) return 2;
-    if (location.pathname.includes('/settings')) return 3;
-    return 0;
-  };
-
-  const [activeTab, setActiveTab] = useState(getInitialTab());
-
-  useEffect(() => {
-    setActiveTab(getInitialTab());
-  }, [location.pathname]);
+  // Active Tab: 0 = Master Barang, 1 = Master Data Dropdown
+  const [activeTab, setActiveTab] = useState(location.pathname.includes('/settings') ? 1 : 0);
 
   const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
     setActiveTab(newValue);
-    if (newValue === 0) navigate('/inventory');
-    else if (newValue === 1) navigate('/inventory/in');
-    else if (newValue === 2) navigate('/inventory/out');
-    else if (newValue === 3) navigate('/inventory/settings');
+    if (newValue === 1) navigate('/inventory/settings');
+    else navigate('/inventory');
   };
 
   // Master Dropdown Data
@@ -132,7 +108,6 @@ export const InventoryManagement: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterBrand, setFilterBrand] = useState<string>('all');
   const [filterCondition, setFilterCondition] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
   const [pageItem, setPageItem] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPagesItem, setTotalPagesItem] = useState(1);
@@ -164,11 +139,9 @@ export const InventoryManagement: React.FC = () => {
   const [generatingCode, setGeneratingCode] = useState(false);
   const [savingItem, setSavingItem] = useState(false);
 
-  // Modal Detail Item & Riwayat
+  // Modal Detail Item
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedItemDetail, setSelectedItemDetail] = useState<InventoryItem | null>(null);
-  const [itemTransactions, setItemTransactions] = useState<InventoryTransaction[]>([]);
-  const [loadingDetail, setLoadingDetail] = useState(false);
 
   // Modal Delete Item
   const [deleteItemDialog, setDeleteItemDialog] = useState<{ open: boolean; item: InventoryItem | null }>({
@@ -177,50 +150,7 @@ export const InventoryManagement: React.FC = () => {
   });
 
   // ==========================================
-  // TAB 1: BARANG MASUK STATES
-  // ==========================================
-  const [inTransactions, setInTransactions] = useState<InventoryTransaction[]>([]);
-  const [loadingInTx, setLoadingInTx] = useState(false);
-  const [pageIn, setPageIn] = useState(1);
-  const [totalInTx, setTotalInTx] = useState(0);
-  const [searchIn, setSearchIn] = useState('');
-
-  // Modal Return / Masuk Barang ke Ruang IT
-  const [openReturnModal, setOpenReturnModal] = useState(false);
-  const [returnForm, setReturnForm] = useState({
-    item_id: '',
-    condition_status: 'Baik' as ItemCondition,
-    transaction_date: new Date().toISOString().slice(0, 16),
-    doc_number: '',
-    notes: '',
-  });
-  const [submittingReturn, setSubmittingReturn] = useState(false);
-
-  // ==========================================
-  // TAB 2: BARANG KELUAR STATES
-  // ==========================================
-  const [outTransactions, setOutTransactions] = useState<InventoryTransaction[]>([]);
-  const [loadingOutTx, setLoadingOutTx] = useState(false);
-  const [pageOut, setPageOut] = useState(1);
-  const [totalOutTx, setTotalOutTx] = useState(0);
-  const [searchOut, setSearchOut] = useState('');
-
-  // Modal Barang Keluar (Handover / Dispatch ke PIC terkait)
-  const [openDispatchModal, setOpenDispatchModal] = useState(false);
-  const [dispatchForm, setDispatchForm] = useState({
-    item_id: '',
-    to_location_id: '',
-    to_pic_id: '',
-    condition_status: 'Baik' as ItemCondition,
-    transaction_date: new Date().toISOString().slice(0, 16),
-    recipient_name: '',
-    doc_number: '',
-    notes: '',
-  });
-  const [submittingDispatch, setSubmittingDispatch] = useState(false);
-
-  // ==========================================
-  // TAB 3: MASTER DROPDOWNS CRUD STATES
+  // TAB 1: MASTER DROPDOWNS CRUD STATES
   // ==========================================
   const [masterSubTab, setMasterSubTab] = useState(0); // 0: Lokasi, 1: PIC, 2: Jenis, 3: Merk & Tipe
 
@@ -290,7 +220,6 @@ export const InventoryManagement: React.FC = () => {
       if (filterCategory !== 'all') params.category_id = filterCategory;
       if (filterBrand !== 'all') params.brand_id = filterBrand;
       if (filterCondition !== 'all') params.condition_status = filterCondition;
-      if (filterStatus !== 'all') params.status = filterStatus;
 
       const res = await api.get('/inventory/items', { params });
       setItems(res.data.items || []);
@@ -306,65 +235,19 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Fetch In Transactions
-  const fetchInTransactions = async () => {
-    setLoadingInTx(true);
-    try {
-      const res = await api.get('/inventory/transactions', {
-        params: {
-          type: 'masuk',
-          page: pageIn,
-          limit: 25,
-          search: searchIn.trim() || undefined,
-        },
-      });
-      setInTransactions(res.data.transactions || []);
-      setTotalInTx(res.data.total || 0);
-    } catch (err: any) {
-      console.error('Gagal memuat transaksi masuk:', err);
-    } finally {
-      setLoadingInTx(false);
-    }
-  };
-
-  // Fetch Out Transactions
-  const fetchOutTransactions = async () => {
-    setLoadingOutTx(true);
-    try {
-      const res = await api.get('/inventory/transactions', {
-        params: {
-          type: 'keluar',
-          page: pageOut,
-          limit: 25,
-          search: searchOut.trim() || undefined,
-        },
-      });
-      setOutTransactions(res.data.transactions || []);
-      setTotalOutTx(res.data.total || 0);
-    } catch (err: any) {
-      console.error('Gagal memuat transaksi keluar:', err);
-    } finally {
-      setLoadingOutTx(false);
-    }
-  };
-
   useEffect(() => {
     fetchMasterData();
   }, []);
 
   useEffect(() => {
     if (activeTab === 0) fetchItems();
-    else if (activeTab === 1) fetchInTransactions();
-    else if (activeTab === 2) fetchOutTransactions();
-  }, [activeTab, pageItem, pageIn, pageOut, filterLocation, filterCategory, filterBrand, filterCondition, filterStatus]);
+  }, [activeTab, pageItem, filterLocation, filterCategory, filterBrand, filterCondition]);
 
   // Real-time socket listener
   useEffect(() => {
     const handleInventoryUpdated = () => {
       fetchMasterData();
       if (activeTab === 0) fetchItems();
-      else if (activeTab === 1) fetchInTransactions();
-      else if (activeTab === 2) fetchOutTransactions();
     };
 
     socket.on('inventoryUpdated', handleInventoryUpdated);
@@ -376,13 +259,6 @@ export const InventoryManagement: React.FC = () => {
   // ==========================================
   // RELATION LOGIC: PIC Filtered by Location
   // ==========================================
-  // In Dispatch Modal: PICs filtered by dispatchForm.to_location_id
-  const filteredDispatchPics = useMemo(() => {
-    if (!dispatchForm.to_location_id) return [];
-    const locId = parseInt(dispatchForm.to_location_id, 10);
-    return pics.filter((p) => p.location_id === locId);
-  }, [pics, dispatchForm.to_location_id]);
-
   // In Item Add/Edit Modal: PICs filtered by itemForm.current_location_id
   const filteredItemPics = useMemo(() => {
     if (!itemForm.current_location_id) return [];
@@ -480,10 +356,10 @@ export const InventoryManagement: React.FC = () => {
 
       if (editingItem) {
         await api.put(`/inventory/items/${editingItem.id}`, payload);
-        setFeedback({ type: 'success', message: `Data barang ${itemForm.name} berhasil diperbarui` });
+        setFeedback({ type: 'success', message: `Data barang ${itemForm.name} berhasil diperbarui (Tanggal Update otomatis diperbarui)` });
       } else {
         await api.post('/inventory/items', payload);
-        setFeedback({ type: 'success', message: `Barang baru ${itemForm.name} berhasil didaftarkan dan masuk ke sistem` });
+        setFeedback({ type: 'success', message: `Barang baru ${itemForm.name} berhasil didaftarkan ke sistem` });
       }
       setOpenItemModal(false);
       fetchItems();
@@ -508,122 +384,9 @@ export const InventoryManagement: React.FC = () => {
   };
 
   // Open Detail Modal
-  const handleOpenDetail = async (item: InventoryItem) => {
+  const handleOpenDetail = (item: InventoryItem) => {
     setSelectedItemDetail(item);
     setDetailModalOpen(true);
-    setLoadingDetail(true);
-    try {
-      const res = await api.get(`/inventory/items/${item.id}`);
-      setSelectedItemDetail(res.data.item);
-      setItemTransactions(res.data.transactions || []);
-    } catch (err: any) {
-      console.error('Gagal mengambil detail item:', err);
-    } finally {
-      setLoadingDetail(false);
-    }
-  };
-
-  // ==========================================
-  // DISPATCH (BARANG KELUAR) HANDLER
-  // ==========================================
-  const handleOpenDispatch = (item?: InventoryItem) => {
-    const defaultItem = item ? String(item.id) : (items.find((i) => i.status === 'in_stock')?.id ? String(items.find((i) => i.status === 'in_stock')?.id) : '');
-    const firstNonITLoc = locations.find((l) => !l.name.toLowerCase().includes('it'))?.id || locations[0]?.id;
-
-    setDispatchForm({
-      item_id: defaultItem,
-      to_location_id: firstNonITLoc ? String(firstNonITLoc) : '',
-      to_pic_id: '',
-      condition_status: item?.condition_status || 'Baik',
-      transaction_date: new Date().toISOString().slice(0, 16),
-      recipient_name: '',
-      doc_number: '',
-      notes: '',
-    });
-    setOpenDispatchModal(true);
-  };
-
-  const handleSubmitDispatch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!dispatchForm.item_id) {
-      setFeedback({ type: 'error', message: 'Silakan pilih barang yang akan dikeluarkan' });
-      return;
-    }
-    if (!dispatchForm.to_location_id) {
-      setFeedback({ type: 'error', message: 'Silakan pilih lokasi tujuan barang' });
-      return;
-    }
-    if (!dispatchForm.to_pic_id) {
-      setFeedback({ type: 'error', message: 'Silakan pilih PIC penerima di lokasi tersebut' });
-      return;
-    }
-
-    setSubmittingDispatch(true);
-    try {
-      const payload = {
-        item_id: parseInt(dispatchForm.item_id, 10),
-        to_location_id: parseInt(dispatchForm.to_location_id, 10),
-        to_pic_id: parseInt(dispatchForm.to_pic_id, 10),
-        condition_status: dispatchForm.condition_status,
-        transaction_date: dispatchForm.transaction_date,
-        recipient_name: dispatchForm.recipient_name.trim() || null,
-        doc_number: dispatchForm.doc_number.trim() || null,
-        notes: dispatchForm.notes.trim() || null,
-      };
-
-      const res = await api.post('/inventory/out', payload);
-      setFeedback({ type: 'success', message: res.data?.message || 'Barang berhasil dikeluarkan ke PIC terkait' });
-      setOpenDispatchModal(false);
-      fetchItems();
-      fetchOutTransactions();
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.response?.data?.message || 'Gagal mengeluarkan barang' });
-    } finally {
-      setSubmittingDispatch(false);
-    }
-  };
-
-  // ==========================================
-  // RETURN (BARANG MASUK KEMBALI KE RUANG IT)
-  // ==========================================
-  const handleOpenReturn = (item?: InventoryItem) => {
-    setReturnForm({
-      item_id: item ? String(item.id) : (items.find((i) => i.status === 'deployed')?.id ? String(items.find((i) => i.status === 'deployed')?.id) : ''),
-      condition_status: item?.condition_status || 'Baik',
-      transaction_date: new Date().toISOString().slice(0, 16),
-      doc_number: '',
-      notes: '',
-    });
-    setOpenReturnModal(true);
-  };
-
-  const handleSubmitReturn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!returnForm.item_id) {
-      setFeedback({ type: 'error', message: 'Silakan pilih barang yang masuk/kembali' });
-      return;
-    }
-
-    setSubmittingReturn(true);
-    try {
-      const payload = {
-        item_id: parseInt(returnForm.item_id, 10),
-        condition_status: returnForm.condition_status,
-        transaction_date: returnForm.transaction_date,
-        doc_number: returnForm.doc_number.trim() || null,
-        notes: returnForm.notes.trim() || null,
-      };
-
-      const res = await api.post('/inventory/in', payload);
-      setFeedback({ type: 'success', message: res.data?.message || 'Barang berhasil dicatat masuk kembali ke Ruang IT' });
-      setOpenReturnModal(false);
-      fetchItems();
-      fetchInTransactions();
-    } catch (err: any) {
-      setFeedback({ type: 'error', message: err.response?.data?.message || 'Gagal memproses barang masuk' });
-    } finally {
-      setSubmittingReturn(false);
-    }
   };
 
   // ==========================================
@@ -747,7 +510,7 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Helper Badge Colors for Condition & Status
+  // Helper Badge Colors for Condition
   const renderConditionChip = (cond: ItemCondition) => {
     switch (cond) {
       case 'Baik':
@@ -761,40 +524,6 @@ export const InventoryManagement: React.FC = () => {
       default:
         return <Chip label={cond} size="small" />;
     }
-  };
-
-  const renderStatusChip = (st: ItemStatus, locName?: string, picName?: string) => {
-    if (st === 'in_stock') {
-      return (
-        <Chip
-          label="Di Ruang IT (Tersedia)"
-          size="small"
-          sx={{
-            bgcolor: isDark ? 'rgba(0, 255, 102, 0.12)' : 'rgba(14, 165, 233, 0.12)',
-            color: isDark ? '#00ff66' : '#0284c7',
-            fontWeight: 800,
-            border: isDark ? '1px solid rgba(0, 255, 102, 0.3)' : '1px solid rgba(14, 165, 233, 0.3)',
-          }}
-        />
-      );
-    }
-    if (st === 'deployed') {
-      return (
-        <Tooltip title={`Lokasi: ${locName || '-'} | PIC: ${picName || '-'}`}>
-          <Chip
-            label={`Keluar ke PIC (${picName || locName || 'Lapangan'})`}
-            size="small"
-            sx={{
-              bgcolor: isDark ? 'rgba(255, 171, 0, 0.15)' : 'rgba(245, 158, 11, 0.15)',
-              color: isDark ? '#ffab00' : '#d97706',
-              fontWeight: 800,
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-            }}
-          />
-        </Tooltip>
-      );
-    }
-    return <Chip label={st} size="small" />;
   };
 
   const formatDate = (dateStr?: string | null, withTime = false) => {
@@ -828,50 +557,38 @@ export const InventoryManagement: React.FC = () => {
         <Box>
           <Typography variant="h5" sx={{ fontWeight: 800, color: isDark ? '#00ff66' : '#1a237e', display: 'flex', alignItems: 'center', gap: 1.5 }}>
             <InventoryIcon sx={{ fontSize: 32 }} />
-            Kelola Inventaris & Keluar Masuk Barang
+            Master Barang
           </Typography>
           <Typography variant="body2" sx={{ color: isDark ? '#94a3b8' : '#64748b', mt: 0.5 }}>
-            Pencatatan sirkulasi barang IT, serah terima ke lokasi & PIC terkait (EMCC, PLANT, Workshop, dll.)
+            Pencatatan inventaris barang, lokasi barang, dan PIC penanggung jawab terkait (EMCC, PLANT, Workshop, dll.)
           </Typography>
         </Box>
 
         {/* Action Buttons Top */}
         <Stack direction="row" spacing={1.5} flexWrap="wrap">
+          <Button
+            variant="outlined"
+            startIcon={<RefreshIcon />}
+            onClick={() => { fetchItems(); fetchMasterData(); }}
+            sx={{ fontWeight: 700 }}
+          >
+            Refresh
+          </Button>
           {!isClient && (
-            <>
-              <Button
-                variant="contained"
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={handleOpenAddItem}
-                sx={{
-                  fontWeight: 700,
-                  bgcolor: isDark ? '#00ff66' : '#1a237e',
-                  color: isDark ? '#0a1220' : '#ffffff',
-                  '&:hover': { bgcolor: isDark ? '#00cc52' : '#283593' },
-                }}
-              >
-                Tambah Master Barang
-              </Button>
-              <Button
-                variant="contained"
-                color="warning"
-                startIcon={<OutboxIcon />}
-                onClick={() => handleOpenDispatch()}
-                sx={{ fontWeight: 700 }}
-              >
-                Keluarkan Barang ke PIC
-              </Button>
-              <Button
-                variant="outlined"
-                color="info"
-                startIcon={<ReturnIcon />}
-                onClick={() => handleOpenReturn()}
-                sx={{ fontWeight: 700 }}
-              >
-                Kembalikan ke Ruang IT
-              </Button>
-            </>
+            <Button
+              variant="contained"
+              color="primary"
+              startIcon={<AddIcon />}
+              onClick={handleOpenAddItem}
+              sx={{
+                fontWeight: 700,
+                bgcolor: isDark ? '#00ff66' : '#1a237e',
+                color: isDark ? '#0a1220' : '#ffffff',
+                '&:hover': { bgcolor: isDark ? '#00cc52' : '#283593' },
+              }}
+            >
+              Tambah Master Barang
+            </Button>
           )}
         </Stack>
       </Box>
@@ -889,7 +606,7 @@ export const InventoryManagement: React.FC = () => {
           <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Inventaris
+                Total Barang
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? '#f8fafc' : '#1a237e', mt: 0.5 }}>
                 {summary.total_items}
@@ -901,7 +618,7 @@ export const InventoryManagement: React.FC = () => {
           <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
             <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
               <Typography variant="caption" sx={{ color: isDark ? '#00ff66' : '#0284c7', fontWeight: 700, textTransform: 'uppercase' }}>
-                Di Ruang IT (Tersedia)
+                Di Ruang IT
               </Typography>
               <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? '#00ff66' : '#0284c7', mt: 0.5 }}>
                 {summary.in_stock_count}
@@ -947,15 +664,13 @@ export const InventoryManagement: React.FC = () => {
         </Grid>
       </Grid>
 
-      {/* NAVIGATION TABS (Master Barang | Barang Masuk | Barang Keluar | Kelola Master Data) */}
+      {/* NAVIGATION TABS (Master Barang | Master Data Dropdown) */}
       <Paper sx={{ mb: 3, borderRadius: 2.5, bgcolor: isDark ? '#0f172a' : '#ffffff' }}>
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
           indicatorColor="primary"
           textColor="primary"
-          variant="scrollable"
-          scrollButtons="auto"
           sx={{
             px: 2,
             borderBottom: 1,
@@ -963,10 +678,8 @@ export const InventoryManagement: React.FC = () => {
             '& .MuiTab-root': { fontWeight: 700, minHeight: 48, fontSize: '0.9rem' },
           }}
         >
-          <Tab icon={<InventoryIcon fontSize="small" />} iconPosition="start" label="Master Barang" />
-          <Tab icon={<InboxIcon fontSize="small" />} iconPosition="start" label="Barang Masuk" />
-          <Tab icon={<OutboxIcon fontSize="small" />} iconPosition="start" label="Barang Keluar" />
-          {!isClient && <Tab icon={<SettingsIcon fontSize="small" />} iconPosition="start" label="Kelola Master Dropdown (Lokasi & PIC, dll)" />}
+          <Tab icon={<InventoryIcon fontSize="small" />} iconPosition="start" label="Daftar Master Barang" />
+          {!isClient && <Tab icon={<SettingsIcon fontSize="small" />} iconPosition="start" label="Master Data Dropdown (Lokasi, PIC, Jenis, Merk/Tipe)" />}
         </Tabs>
 
         {/* ========================================================
@@ -976,7 +689,7 @@ export const InventoryManagement: React.FC = () => {
           <Box sx={{ p: 2.5 }}>
             {/* Search and Filters */}
             <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
-              <Grid item xs={12} md={3}>
+              <Grid item xs={12} md={3.6}>
                 <TextField
                   fullWidth
                   size="small"
@@ -993,10 +706,10 @@ export const InventoryManagement: React.FC = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={6} sm={4} md={1.8}>
+              <Grid item xs={6} sm={4} md={2.1}>
                 <FormControl fullWidth size="small">
-                  <InputLabel>Lokasi</InputLabel>
-                  <Select value={filterLocation} label="Lokasi" onChange={(e) => setFilterLocation(e.target.value)}>
+                  <InputLabel>Lokasi Barang</InputLabel>
+                  <Select value={filterLocation} label="Lokasi Barang" onChange={(e) => setFilterLocation(e.target.value)}>
                     <MenuItem value="all">Semua Lokasi</MenuItem>
                     {locations.map((loc) => (
                       <MenuItem key={loc.id} value={String(loc.id)}>{loc.name}</MenuItem>
@@ -1004,7 +717,7 @@ export const InventoryManagement: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={6} sm={4} md={1.8}>
+              <Grid item xs={6} sm={4} md={2.1}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Jenis Barang</InputLabel>
                   <Select value={filterCategory} label="Jenis Barang" onChange={(e) => setFilterCategory(e.target.value)}>
@@ -1015,7 +728,7 @@ export const InventoryManagement: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={6} sm={4} md={1.8}>
+              <Grid item xs={6} sm={4} md={2.1}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Merk</InputLabel>
                   <Select value={filterBrand} label="Merk" onChange={(e) => setFilterBrand(e.target.value)}>
@@ -1026,7 +739,7 @@ export const InventoryManagement: React.FC = () => {
                   </Select>
                 </FormControl>
               </Grid>
-              <Grid item xs={6} sm={4} md={1.8}>
+              <Grid item xs={6} sm={4} md={2.1}>
                 <FormControl fullWidth size="small">
                   <InputLabel>Kondisi</InputLabel>
                   <Select value={filterCondition} label="Kondisi" onChange={(e) => setFilterCondition(e.target.value)}>
@@ -1035,16 +748,6 @@ export const InventoryManagement: React.FC = () => {
                     <MenuItem value="Rusak">Rusak</MenuItem>
                     <MenuItem value="Hilang">Hilang</MenuItem>
                     <MenuItem value="Scrap">Scrap</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6} sm={4} md={1.8}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Status Posisi</InputLabel>
-                  <Select value={filterStatus} label="Status Posisi" onChange={(e) => setFilterStatus(e.target.value)}>
-                    <MenuItem value="all">Semua Status</MenuItem>
-                    <MenuItem value="in_stock">Di Ruang IT (Tersedia)</MenuItem>
-                    <MenuItem value="deployed">Di Lapangan / PIC</MenuItem>
                   </Select>
                 </FormControl>
               </Grid>
@@ -1066,14 +769,13 @@ export const InventoryManagement: React.FC = () => {
                     <TableCell sx={{ fontWeight: 800 }}>TGL MASUK</TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>TGL UPDATE</TableCell>
                     <TableCell sx={{ fontWeight: 800 }}>KONDISI</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>STATUS</TableCell>
                     <TableCell align="center" sx={{ fontWeight: 800 }}>AKSI</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
                   {loadingItems ? (
                     <TableRow>
-                      <TableCell colSpan={13} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                         <CircularProgress size={36} />
                         <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
                           Memuat data inventaris...
@@ -1082,7 +784,7 @@ export const InventoryManagement: React.FC = () => {
                     </TableRow>
                   ) : items.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={13} align="center" sx={{ py: 6 }}>
+                      <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
                         <InventoryIcon sx={{ fontSize: 48, color: '#94a3b8', mb: 1 }} />
                         <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
                           Belum ada data barang ditemukan
@@ -1134,7 +836,7 @@ export const InventoryManagement: React.FC = () => {
                               sx={{ fontWeight: 700 }}
                             />
                           ) : (
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>- (Standby IT)</Typography>
+                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>- (Ruang IT)</Typography>
                           )}
                         </TableCell>
                         <TableCell sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
@@ -1144,10 +846,9 @@ export const InventoryManagement: React.FC = () => {
                           {formatDate(item.last_update_date, true)}
                         </TableCell>
                         <TableCell>{renderConditionChip(item.condition_status)}</TableCell>
-                        <TableCell>{renderStatusChip(item.status, item.current_location?.name, item.current_pic?.name)}</TableCell>
                         <TableCell align="center">
                           <Stack direction="row" spacing={0.5} justifyContent="center">
-                            <Tooltip title="Detail & Riwayat Mutasi">
+                            <Tooltip title="Detail Lengkap">
                               <IconButton size="small" color="info" onClick={() => handleOpenDetail(item)}>
                                 <ViewIcon fontSize="small" />
                               </IconButton>
@@ -1155,21 +856,7 @@ export const InventoryManagement: React.FC = () => {
 
                             {!isClient && (
                               <>
-                                {item.status === 'in_stock' ? (
-                                  <Tooltip title="Keluarkan Barang ke PIC Terkait">
-                                    <IconButton size="small" color="warning" onClick={() => handleOpenDispatch(item)}>
-                                      <OutboxIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                ) : (
-                                  <Tooltip title="Kembalikan Barang ke Ruang IT">
-                                    <IconButton size="small" color="success" onClick={() => handleOpenReturn(item)}>
-                                      <ReturnIcon fontSize="small" />
-                                    </IconButton>
-                                  </Tooltip>
-                                )}
-
-                                <Tooltip title="Edit Data Barang">
+                                <Tooltip title="Edit / Pindahkan ke PIC">
                                   <IconButton size="small" color="primary" onClick={() => handleOpenEditItem(item)}>
                                     <EditIcon fontSize="small" />
                                   </IconButton>
@@ -1206,273 +893,16 @@ export const InventoryManagement: React.FC = () => {
         )}
 
         {/* ========================================================
-            TAB 1: BARANG MASUK (Transactions In & Returns)
+            TAB 1: KELOLA MASTER DROPDOWN (Lokasi & PIC, Jenis, Merk/Tipe)
         ======================================================== */}
-        {activeTab === 1 && (
-          <Box sx={{ p: 2.5 }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
-                  Log & Rekap Barang Masuk
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Riwayat pendaftaran barang baru ke gudang IT atau pengembalian barang dari lapangan/PIC
-                </Typography>
-              </Box>
-              {!isClient && (
-                <Stack direction="row" spacing={1}>
-                  <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={handleOpenAddItem} sx={{ fontWeight: 700 }}>
-                    Registrasi Barang Baru
-                  </Button>
-                  <Button variant="outlined" color="info" startIcon={<ReturnIcon />} onClick={() => handleOpenReturn()} sx={{ fontWeight: 700 }}>
-                    Catat Pengembalian ke Ruang IT
-                  </Button>
-                </Stack>
-              )}
-            </Box>
-
-            <Box sx={{ mb: 2, maxWidth: 360 }}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Cari transaksi masuk..."
-                value={searchIn}
-                onChange={(e) => setSearchIn(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') fetchInTransactions(); }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            <TableContainer sx={{ borderRadius: 2, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>WAKTU MASUK</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>ID BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>NAMA BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>SERIAL NUMBER</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>JENIS TRANSAKSI</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>DARI LOKASI / PIC</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>KE LOKASI (RUANG IT)</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>KONDISI</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>NO SURAT / CATATAN</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>PETUGAS IT</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loadingInTx ? (
-                    <TableRow>
-                      <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                        <CircularProgress size={36} />
-                      </TableCell>
-                    </TableRow>
-                  ) : inTransactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          Belum ada riwayat transaksi barang masuk
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    inTransactions.map((tx, idx) => (
-                      <TableRow key={tx.id} hover>
-                        <TableCell align="center" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                          {(pageIn - 1) * 25 + idx + 1}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                          {formatDate(tx.transaction_date, true)}
-                        </TableCell>
-                        <TableCell sx={{ fontFamily: 'monospace', fontWeight: 800, color: isDark ? '#00ff66' : '#1a237e' }}>
-                          {tx.item?.item_code || '-'}
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>{tx.item?.name || '-'}</TableCell>
-                        <TableCell sx={{ fontFamily: 'monospace' }}>{tx.item?.serial_number || '-'}</TableCell>
-                        <TableCell>
-                          <Chip
-                            label={tx.transaction_type === 'masuk' ? 'Barang Baru Masuk' : 'Kembali ke Gudang'}
-                            size="small"
-                            color={tx.transaction_type === 'masuk' ? 'success' : 'info'}
-                            sx={{ fontWeight: 700 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {tx.from_pic ? (
-                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                              {tx.from_pic.name} ({tx.from_location?.name || '-'})
-                            </Typography>
-                          ) : tx.from_location ? (
-                            tx.from_location.name
-                          ) : (
-                            <Typography variant="caption" sx={{ color: 'text.secondary' }}>Supplier / Baru</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>{tx.to_location?.name || 'Ruang IT'}</TableCell>
-                        <TableCell>{renderConditionChip(tx.condition_status)}</TableCell>
-                        <TableCell>
-                          {tx.doc_number && <Typography variant="caption" sx={{ display: 'block', fontWeight: 700 }}>No: {tx.doc_number}</Typography>}
-                          <Typography variant="body2">{tx.notes || '-'}</Typography>
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>{tx.operator_name || '-'}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {totalInTx > 25 && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                <Pagination count={Math.ceil(totalInTx / 25)} page={pageIn} onChange={(_, p) => setPageIn(p)} color="primary" size="small" />
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {/* ========================================================
-            TAB 2: BARANG KELUAR (Dispatch to Location & PIC)
-        ======================================================== */}
-        {activeTab === 2 && (
-          <Box sx={{ p: 2.5 }}>
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-              <Box>
-                <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
-                  Log & Rekap Barang Keluar
-                </Typography>
-                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                  Riwayat penyerahan / pengeluaran barang dari ruang IT ke lokasi & PIC tujuan (EMCC, PLANT, dll.)
-                </Typography>
-              </Box>
-              {!isClient && (
-                <Button variant="contained" color="warning" startIcon={<OutboxIcon />} onClick={() => handleOpenDispatch()} sx={{ fontWeight: 700 }}>
-                  Keluarkan Barang ke PIC
-                </Button>
-              )}
-            </Box>
-
-            <Box sx={{ mb: 2, maxWidth: 360 }}>
-              <TextField
-                fullWidth
-                size="small"
-                placeholder="Cari transaksi keluar..."
-                value={searchOut}
-                onChange={(e) => setSearchOut(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter') fetchOutTransactions(); }}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Box>
-
-            <TableContainer sx={{ borderRadius: 2, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>WAKTU KELUAR</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>ID BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>NAMA BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>SERIAL NUMBER</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>DARI LOKASI</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>LOKASI TUJUAN</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>PIC PENERIMA</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>KONDISI KELUAR</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>NO BAST / CATATAN</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>PETUGAS IT</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loadingOutTx ? (
-                    <TableRow>
-                      <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                        <CircularProgress size={36} />
-                      </TableCell>
-                    </TableRow>
-                  ) : outTransactions.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                          Belum ada riwayat transaksi barang keluar
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    outTransactions.map((tx, idx) => (
-                      <TableRow key={tx.id} hover>
-                        <TableCell align="center" sx={{ fontWeight: 700, color: 'text.secondary' }}>
-                          {(pageOut - 1) * 25 + idx + 1}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>
-                          {formatDate(tx.transaction_date, true)}
-                        </TableCell>
-                        <TableCell sx={{ fontFamily: 'monospace', fontWeight: 800, color: isDark ? '#00ff66' : '#1a237e' }}>
-                          {tx.item?.item_code || '-'}
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 700 }}>{tx.item?.name || '-'}</TableCell>
-                        <TableCell sx={{ fontFamily: 'monospace' }}>{tx.item?.serial_number || '-'}</TableCell>
-                        <TableCell>{tx.from_location?.name || 'Ruang IT'}</TableCell>
-                        <TableCell>
-                          <Chip
-                            icon={<LocationIcon sx={{ fontSize: '14px !important' }} />}
-                            label={tx.to_location?.name || '-'}
-                            size="small"
-                            variant="outlined"
-                            color="secondary"
-                            sx={{ fontWeight: 700 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          <Chip
-                            icon={<PersonIcon sx={{ fontSize: '14px !important' }} />}
-                            label={tx.to_pic?.name || tx.recipient_name || '-'}
-                            size="small"
-                            color="primary"
-                            sx={{ fontWeight: 700 }}
-                          />
-                        </TableCell>
-                        <TableCell>{renderConditionChip(tx.condition_status)}</TableCell>
-                        <TableCell>
-                          {tx.doc_number && <Typography variant="caption" sx={{ display: 'block', fontWeight: 700 }}>BAST: {tx.doc_number}</Typography>}
-                          <Typography variant="body2">{tx.notes || '-'}</Typography>
-                        </TableCell>
-                        <TableCell sx={{ fontWeight: 600 }}>{tx.operator_name || '-'}</TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-
-            {totalOutTx > 25 && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                <Pagination count={Math.ceil(totalOutTx / 25)} page={pageOut} onChange={(_, p) => setPageOut(p)} color="primary" size="small" />
-              </Box>
-            )}
-          </Box>
-        )}
-
-        {/* ========================================================
-            TAB 3: KELOLA MASTER DROPDOWN (Lokasi & PIC, Jenis, Merk/Tipe)
-        ======================================================== */}
-        {activeTab === 3 && !isClient && (
+        {activeTab === 1 && !isClient && (
           <Box sx={{ p: 2.5 }}>
             <Box sx={{ mb: 2 }}>
               <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
                 Kelola Data Master Dropdown
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Atur data dinamis Lokasi Barang & relasi PIC, Jenis Barang, serta Merk & Tipe.
+                Atur data dinamis Lokasi Barang & relasi PIC penanggung jawab, Jenis Barang, serta Merk & Tipe.
               </Typography>
             </Box>
 
@@ -1861,7 +1291,7 @@ export const InventoryManagement: React.FC = () => {
                   <FormHelperText>
                     {itemForm.current_location_id ? (
                       filteredItemPics.length > 0
-                        ? `Ditemukan ${filteredItemPics.length} PIC di lokasi ini`
+                        ? `Ditemukan ${filteredItemPics.length} PIC di ${locations.find((l) => l.id === parseInt(itemForm.current_location_id, 10))?.name}`
                         : 'Belum ada PIC terdaftar di lokasi ini. (Bisa kosong)'
                     ) : (
                       'Pilih lokasi barang terlebih dahulu'
@@ -1921,272 +1351,19 @@ export const InventoryManagement: React.FC = () => {
       </Dialog>
 
       {/* ========================================================
-          MODAL: BARANG KELUAR (Dispatch ke Lokasi & PIC)
+          MODAL: DETAIL BARANG
       ======================================================== */}
-      <Dialog open={openDispatchModal} onClose={() => setOpenDispatchModal(false)} maxWidth="sm" fullWidth>
-        <form onSubmit={handleSubmitDispatch}>
-          <DialogTitle sx={{ fontWeight: 800, color: '#f59e0b', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <OutboxIcon /> Keluarkan Barang ke PIC Terkait
-          </DialogTitle>
-          <DialogContent dividers>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Pilihlah barang yang berada di Ruang IT untuk diserahkan ke Lokasi tujuan. Dropdown PIC akan tersaring otomatis sesuai Lokasi yang Anda pilih.
-            </Alert>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Pilih Barang</InputLabel>
-                  <Select
-                    value={dispatchForm.item_id}
-                    label="Pilih Barang"
-                    onChange={(e) => {
-                      const selected = items.find((i) => i.id === parseInt(e.target.value, 10));
-                      setDispatchForm({
-                        ...dispatchForm,
-                        item_id: e.target.value,
-                        condition_status: selected?.condition_status || 'Baik',
-                      });
-                    }}
-                  >
-                    {items.map((it) => (
-                      <MenuItem key={it.id} value={String(it.id)}>
-                        [{it.item_code}] {it.name} - Posisi: {it.current_location?.name || 'Ruang IT'} (Kondisi: {it.condition_status})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Lokasi Tujuan</InputLabel>
-                  <Select
-                    value={dispatchForm.to_location_id}
-                    label="Lokasi Tujuan"
-                    onChange={(e) => {
-                      setDispatchForm({
-                        ...dispatchForm,
-                        to_location_id: e.target.value,
-                        to_pic_id: '', // Reset PIC on location change!
-                      });
-                    }}
-                  >
-                    {locations.map((loc) => (
-                      <MenuItem key={loc.id} value={String(loc.id)}>{loc.name}</MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>Contoh: EMCC, PLANT, WORKSHOP</FormHelperText>
-                </FormControl>
-              </Grid>
-
-              {/* DYNAMIC PIC SELECTOR: Filtered by Location */}
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required disabled={!dispatchForm.to_location_id}>
-                  <InputLabel>PIC Penerima di Lokasi</InputLabel>
-                  <Select
-                    value={dispatchForm.to_pic_id}
-                    label="PIC Penerima di Lokasi"
-                    onChange={(e) => setDispatchForm({ ...dispatchForm, to_pic_id: e.target.value })}
-                  >
-                    {filteredDispatchPics.map((p) => (
-                      <MenuItem key={p.id} value={String(p.id)}>
-                        {p.name} {p.department ? `(${p.department})` : ''}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                  <FormHelperText>
-                    {dispatchForm.to_location_id ? (
-                      filteredDispatchPics.length > 0
-                        ? `Muncul ${filteredDispatchPics.length} PIC di ${locations.find((l) => l.id === parseInt(dispatchForm.to_location_id, 10))?.name}`
-                        : 'Tidak ada PIC di lokasi ini. Atur di menu Master PIC.'
-                    ) : (
-                      'Pilih lokasi tujuan terlebih dahulu'
-                    )}
-                  </FormHelperText>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Tanggal & Waktu Keluar (TanggalUpdate)"
-                  value={dispatchForm.transaction_date}
-                  onChange={(e) => setDispatchForm({ ...dispatchForm, transaction_date: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Kondisi Saat Keluar</InputLabel>
-                  <Select
-                    value={dispatchForm.condition_status}
-                    label="Kondisi Saat Keluar"
-                    onChange={(e) => setDispatchForm({ ...dispatchForm, condition_status: e.target.value as ItemCondition })}
-                  >
-                    <MenuItem value="Baik">Baik</MenuItem>
-                    <MenuItem value="Rusak">Rusak</MenuItem>
-                    <MenuItem value="Scrap">Scrap</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="No. Surat Jalan / BAST (Opsional)"
-                  placeholder="Misal: BAST-2026/XI/001"
-                  value={dispatchForm.doc_number}
-                  onChange={(e) => setDispatchForm({ ...dispatchForm, doc_number: e.target.value })}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  label="Nama Tambahan Penerima (Jika ada)"
-                  placeholder="Opsional jika diwakilkan"
-                  value={dispatchForm.recipient_name}
-                  onChange={(e) => setDispatchForm({ ...dispatchForm, recipient_name: e.target.value })}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Keterangan / Keperluan Keluar"
-                  placeholder="Misal: Dipasang untuk pos jaga baru EMCC"
-                  value={dispatchForm.notes}
-                  onChange={(e) => setDispatchForm({ ...dispatchForm, notes: e.target.value })}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setOpenDispatchModal(false)}>Batal</Button>
-            <Button type="submit" variant="contained" color="warning" disabled={submittingDispatch} sx={{ fontWeight: 700 }}>
-              {submittingDispatch ? 'Memproses...' : 'Keluarkan Barang'}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      {/* ========================================================
-          MODAL: BARANG MASUK / KEMBALI KE RUANG IT
-      ======================================================== */}
-      <Dialog open={openReturnModal} onClose={() => setOpenReturnModal(false)} maxWidth="sm" fullWidth>
-        <form onSubmit={handleSubmitReturn}>
-          <DialogTitle sx={{ fontWeight: 800, color: '#0284c7', display: 'flex', alignItems: 'center', gap: 1 }}>
-            <ReturnIcon /> Pengembalian Barang ke Ruang IT
-          </DialogTitle>
-          <DialogContent dividers>
-            <Alert severity="info" sx={{ mb: 2 }}>
-              Pilih barang yang saat ini berada di lapangan/PIC untuk ditarik kembali masuk ke Ruang IT. Status barang akan otomatis diperbarui menjadi "Di Ruang IT (Tersedia)".
-            </Alert>
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <FormControl fullWidth required>
-                  <InputLabel>Pilih Barang yang Kembali</InputLabel>
-                  <Select
-                    value={returnForm.item_id}
-                    label="Pilih Barang yang Kembali"
-                    onChange={(e) => {
-                      const selected = items.find((i) => i.id === parseInt(e.target.value, 10));
-                      setReturnForm({
-                        ...returnForm,
-                        item_id: e.target.value,
-                        condition_status: selected?.condition_status || 'Baik',
-                      });
-                    }}
-                  >
-                    {items.map((it) => (
-                      <MenuItem key={it.id} value={String(it.id)}>
-                        [{it.item_code}] {it.name} - Saat ini di: {it.current_location?.name || 'Ruang IT'} (PIC: {it.current_pic?.name || '-'})
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  fullWidth
-                  type="datetime-local"
-                  label="Tanggal & Waktu Masuk"
-                  value={returnForm.transaction_date}
-                  onChange={(e) => setReturnForm({ ...returnForm, transaction_date: e.target.value })}
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-
-              <Grid item xs={12} sm={6}>
-                <FormControl fullWidth required>
-                  <InputLabel>Kondisi Saat Kembali</InputLabel>
-                  <Select
-                    value={returnForm.condition_status}
-                    label="Kondisi Saat Kembali"
-                    onChange={(e) => setReturnForm({ ...returnForm, condition_status: e.target.value as ItemCondition })}
-                  >
-                    <MenuItem value="Baik">Baik</MenuItem>
-                    <MenuItem value="Rusak">Rusak (Perlu Perbaikan)</MenuItem>
-                    <MenuItem value="Scrap">Scrap (Afkir / Rusak Total)</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="No. Dokumen / Tanda Terima (Opsional)"
-                  value={returnForm.doc_number}
-                  onChange={(e) => setReturnForm({ ...returnForm, doc_number: e.target.value })}
-                />
-              </Grid>
-
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  multiline
-                  rows={2}
-                  label="Alasan Pengembalian / Catatan"
-                  placeholder="Misal: Pergantian unit, selesai proyek, atau rusak perlu diservis"
-                  value={returnForm.notes}
-                  onChange={(e) => setReturnForm({ ...returnForm, notes: e.target.value })}
-                />
-              </Grid>
-            </Grid>
-          </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setOpenReturnModal(false)}>Batal</Button>
-            <Button type="submit" variant="contained" color="info" disabled={submittingReturn} sx={{ fontWeight: 700 }}>
-              {submittingReturn ? 'Memproses...' : 'Konfirmasi Masuk ke Ruang IT'}
-            </Button>
-          </DialogActions>
-        </form>
-      </Dialog>
-
-      {/* ========================================================
-          MODAL: DETAIL BARANG & RIWAYAT MUTASI
-      ======================================================== */}
-      <Dialog open={detailModalOpen} onClose={() => setDetailModalOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={detailModalOpen} onClose={() => setDetailModalOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Detail Barang & Riwayat Mutasi
+          Detail Barang
           <IconButton size="small" onClick={() => setDetailModalOpen(false)}>
             <CloseIcon />
           </IconButton>
         </DialogTitle>
         <DialogContent dividers>
-          {loadingDetail ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : selectedItemDetail ? (
+          {selectedItemDetail && (
             <Box>
-              {/* Info Header */}
-              <Grid container spacing={2} sx={{ mb: 3 }}>
+              <Grid container spacing={2}>
                 <Grid item xs={12} sm={6}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>ID BARANG</Typography>
                   <Typography variant="h6" sx={{ fontFamily: 'monospace', fontWeight: 800, color: isDark ? '#00ff66' : '#1a237e' }}>
@@ -2197,93 +1374,47 @@ export const InventoryManagement: React.FC = () => {
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>NAMA BARANG</Typography>
                   <Typography variant="h6" sx={{ fontWeight: 800 }}>{selectedItemDetail.name}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid item xs={6}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>SERIAL NUMBER</Typography>
                   <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 600 }}>{selectedItemDetail.serial_number || '-'}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid item xs={6}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>JENIS BARANG</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 600 }}>{selectedItemDetail.category?.name || '-'}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
+                <Grid item xs={6}>
                   <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>MERK & TIPE</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 600 }}>{selectedItemDetail.brand?.name || '-'} {selectedItemDetail.type?.name || ''}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>KONDISI SEKARANG</Typography>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>KONDISI</Typography>
                   <Box sx={{ mt: 0.5 }}>{renderConditionChip(selectedItemDetail.condition_status)}</Box>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>LOKASI SEKARANG</Typography>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>LOKASI BARANG</Typography>
                   <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedItemDetail.current_location?.name || 'Ruang IT'}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>PIC TERKAIT SEKARANG</Typography>
-                  <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedItemDetail.current_pic?.name || '- (Standby IT)'}</Typography>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>PIC TERKAIT</Typography>
+                  <Typography variant="body1" sx={{ fontWeight: 700 }}>{selectedItemDetail.current_pic?.name || '- (Ruang IT)'}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>TANGGAL MASUK AWAL</Typography>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>TANGGAL MASUK</Typography>
                   <Typography variant="body1">{formatDate(selectedItemDetail.entry_date)}</Typography>
                 </Grid>
-                <Grid item xs={6} sm={3}>
-                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>TANGGAL UPDATE TERAKHIR</Typography>
+                <Grid item xs={6}>
+                  <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>TANGGAL UPDATE</Typography>
                   <Typography variant="body1">{formatDate(selectedItemDetail.last_update_date, true)}</Typography>
                 </Grid>
+                {selectedItemDetail.notes && (
+                  <Grid item xs={12}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700 }}>CATATAN</Typography>
+                    <Typography variant="body2">{selectedItemDetail.notes}</Typography>
+                  </Grid>
+                )}
               </Grid>
-
-              <Divider sx={{ my: 2 }} />
-
-              <Typography variant="subtitle1" sx={{ fontWeight: 800, mb: 1.5, display: 'flex', alignItems: 'center', gap: 1 }}>
-                <HistoryIcon /> Riwayat Keluar Masuk & Mutasi
-              </Typography>
-
-              <TableContainer sx={{ border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', borderRadius: 2 }}>
-                <Table size="small">
-                  <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
-                    <TableRow>
-                      <TableCell sx={{ fontWeight: 800 }}>WAKTU</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>JENIS</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>DARI</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>KE (TUJUAN)</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>PIC PENERIMA</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>KONDISI</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>KETERANGAN</TableCell>
-                      <TableCell sx={{ fontWeight: 800 }}>PETUGAS</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {itemTransactions.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={8} align="center" sx={{ py: 3 }}>
-                          Belum ada riwayat mutasi
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      itemTransactions.map((tx) => (
-                        <TableRow key={tx.id} hover>
-                          <TableCell sx={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{formatDate(tx.transaction_date, true)}</TableCell>
-                          <TableCell>
-                            <Chip
-                              label={tx.transaction_type.toUpperCase()}
-                              size="small"
-                              color={tx.transaction_type === 'masuk' ? 'success' : tx.transaction_type === 'keluar' ? 'warning' : 'info'}
-                              sx={{ fontWeight: 700 }}
-                            />
-                          </TableCell>
-                          <TableCell>{tx.from_location?.name || '-'}</TableCell>
-                          <TableCell sx={{ fontWeight: 700 }}>{tx.to_location?.name || '-'}</TableCell>
-                          <TableCell>{tx.to_pic?.name || tx.recipient_name || '-'}</TableCell>
-                          <TableCell>{renderConditionChip(tx.condition_status)}</TableCell>
-                          <TableCell sx={{ fontSize: '0.85rem' }}>{tx.notes || '-'}</TableCell>
-                          <TableCell sx={{ fontSize: '0.85rem' }}>{tx.operator_name || '-'}</TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </TableContainer>
             </Box>
-          ) : null}
+          )}
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setDetailModalOpen(false)}>Tutup</Button>
@@ -2297,7 +1428,7 @@ export const InventoryManagement: React.FC = () => {
         <DialogTitle sx={{ fontWeight: 800 }}>Hapus Barang?</DialogTitle>
         <DialogContent>
           <Typography>
-            Apakah Anda yakin ingin menghapus barang <strong>{deleteItemDialog.item?.name}</strong> (ID: {deleteItemDialog.item?.item_code})? Seluruh riwayat transaksi terkait barang ini juga akan terhapus.
+            Apakah Anda yakin ingin menghapus barang <strong>{deleteItemDialog.item?.name}</strong> (ID: {deleteItemDialog.item?.item_code})?
           </Typography>
         </DialogContent>
         <DialogActions>

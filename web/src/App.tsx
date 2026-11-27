@@ -115,11 +115,8 @@ export const App: React.FC = () => {
               <Route path="/inspections" element={<StaffRoute element={<InspectionList />} />} />
               <Route path="/inspections/create" element={<StaffRoute element={<InspectionCreate />} />} />
 
-              {/* Inventaris: Master Barang, Barang Masuk, Barang Keluar */}
+              {/* Inventaris: Master Barang */}
               <Route path="/inventory" element={<StaffRoute element={<InventoryManagement />} />} />
-              <Route path="/inventory/items" element={<StaffRoute element={<InventoryManagement />} />} />
-              <Route path="/inventory/in" element={<StaffRoute element={<InventoryManagement />} />} />
-              <Route path="/inventory/out" element={<StaffRoute element={<InventoryManagement />} />} />
               <Route path="/inventory/settings" element={<StaffRoute element={<InventoryManagement />} />} />
 
               {/* Master Data & Admin Routes */}
