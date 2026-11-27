@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, forwardRef } from 'react';
 import {
   Box,
   Typography,
@@ -34,7 +34,14 @@ import {
   Divider,
   Stack,
   FormHelperText,
+  useTheme,
+  useMediaQuery,
+  Fab,
+  AppBar,
+  Toolbar,
+  Slide,
 } from '@mui/material';
+import { TransitionProps } from '@mui/material/transitions';
 import {
   Search as SearchIcon,
   Add as AddIcon,
@@ -53,6 +60,13 @@ import {
   Cancel as CancelIcon,
   DeleteSweep as ScrapIcon,
   Close as CloseIcon,
+  ContentCopy as CopyIcon,
+  ViewList as ViewListIcon,
+  ViewModule as ViewCardIcon,
+  PhoneAndroid as AndroidIcon,
+  FilterList as FilterIcon,
+  Check as CheckIcon,
+  AccessTime as TimeIcon,
 } from '@mui/icons-material';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../api';
@@ -68,11 +82,49 @@ import {
   ItemCondition,
 } from '../types';
 
+// Slide transition for Android / Mobile full-screen dialogs
+const Transition = forwardRef(function Transition(
+  props: TransitionProps & {
+    children: React.ReactElement;
+  },
+  ref: React.Ref<unknown>,
+) {
+  return <Slide direction="up" ref={ref} {...props} />;
+});
+
 export const InventoryManagement: React.FC = () => {
   const { mode } = useAppTheme();
   const isDark = mode === 'dark';
+  const theme = useTheme();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Responsive & Android detection
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm')); // < 600px
+  const isTablet = useMediaQuery(theme.breakpoints.down('md')); // < 900px
+  const isAndroid = useMemo(() => {
+    if (typeof navigator !== 'undefined') {
+      return /Android/i.test(navigator.userAgent);
+    }
+    return false;
+  }, []);
+
+  // View Mode: 'card' (optimal for mobile & Android) vs 'table' (desktop spreadsheet)
+  const [viewMode, setViewMode] = useState<'card' | 'table'>(() => {
+    if (typeof window !== 'undefined') {
+      if (window.innerWidth < 768 || /Android/i.test(navigator.userAgent)) {
+        return 'card';
+      }
+    }
+    return 'table';
+  });
+
+  // Automatically adapt view mode when screen size changes, but let user toggle manually
+  useEffect(() => {
+    if (isMobile) {
+      setViewMode('card');
+    }
+  }, [isMobile]);
 
   // User role checking
   const userJson = localStorage.getItem('taurus_user');
@@ -108,6 +160,7 @@ export const InventoryManagement: React.FC = () => {
   const [filterCategory, setFilterCategory] = useState<string>('all');
   const [filterBrand, setFilterBrand] = useState<string>('all');
   const [filterCondition, setFilterCondition] = useState<string>('all');
+  const [showFilterDrawer, setShowFilterDrawer] = useState(false);
   const [pageItem, setPageItem] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPagesItem, setTotalPagesItem] = useState(1);
@@ -259,14 +312,12 @@ export const InventoryManagement: React.FC = () => {
   // ==========================================
   // RELATION LOGIC: PIC Filtered by Location
   // ==========================================
-  // In Item Add/Edit Modal: PICs filtered by itemForm.current_location_id
   const filteredItemPics = useMemo(() => {
     if (!itemForm.current_location_id) return [];
     const locId = parseInt(itemForm.current_location_id, 10);
     return pics.filter((p) => p.location_id === locId);
   }, [pics, itemForm.current_location_id]);
 
-  // Filtered types by selected brand
   const filteredTypesByBrand = (brandId: string) => {
     if (!brandId) return types;
     const bId = parseInt(brandId, 10);
@@ -392,7 +443,6 @@ export const InventoryManagement: React.FC = () => {
   // ==========================================
   // MASTER DATA MODAL HANDLERS
   // ==========================================
-  // Save Location
   const handleSaveLocation = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!locForm.name.trim()) return;
@@ -410,7 +460,6 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Save PIC
   const handleSavePic = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!picForm.name.trim()) return;
@@ -434,7 +483,6 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Save Category
   const handleSaveCategory = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!catForm.name.trim()) return;
@@ -452,7 +500,6 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Save Brand
   const handleSaveBrand = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!brandForm.name.trim()) return;
@@ -470,7 +517,6 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Save Type
   const handleSaveType = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!typeForm.name.trim()) return;
@@ -493,7 +539,6 @@ export const InventoryManagement: React.FC = () => {
     }
   };
 
-  // Delete Master Handler
   const handleDeleteMaster = async () => {
     try {
       if (deleteMasterDialog.type === 'location') await api.delete(`/inventory/locations/${deleteMasterDialog.id}`);
@@ -514,13 +559,13 @@ export const InventoryManagement: React.FC = () => {
   const renderConditionChip = (cond: ItemCondition) => {
     switch (cond) {
       case 'Baik':
-        return <Chip icon={<CheckCircleIcon sx={{ fontSize: '14px !important' }} />} label="Baik" size="small" sx={{ bgcolor: 'rgba(46, 125, 50, 0.15)', color: '#2e7d32', fontWeight: 700 }} />;
+        return <Chip icon={<CheckCircleIcon sx={{ fontSize: '13px !important' }} />} label="Baik" size="small" sx={{ bgcolor: 'rgba(46, 125, 50, 0.15)', color: '#2e7d32', fontWeight: 700 }} />;
       case 'Rusak':
-        return <Chip icon={<WarningIcon sx={{ fontSize: '14px !important' }} />} label="Rusak" size="small" sx={{ bgcolor: 'rgba(237, 108, 2, 0.15)', color: '#ed6c02', fontWeight: 700 }} />;
+        return <Chip icon={<WarningIcon sx={{ fontSize: '13px !important' }} />} label="Rusak" size="small" sx={{ bgcolor: 'rgba(237, 108, 2, 0.15)', color: '#ed6c02', fontWeight: 700 }} />;
       case 'Hilang':
-        return <Chip icon={<CancelIcon sx={{ fontSize: '14px !important' }} />} label="Hilang" size="small" sx={{ bgcolor: 'rgba(211, 47, 47, 0.15)', color: '#d32f2f', fontWeight: 700 }} />;
+        return <Chip icon={<CancelIcon sx={{ fontSize: '13px !important' }} />} label="Hilang" size="small" sx={{ bgcolor: 'rgba(211, 47, 47, 0.15)', color: '#d32f2f', fontWeight: 700 }} />;
       case 'Scrap':
-        return <Chip icon={<ScrapIcon sx={{ fontSize: '14px !important' }} />} label="Scrap" size="small" sx={{ bgcolor: 'rgba(100, 116, 139, 0.2)', color: isDark ? '#cbd5e1' : '#475569', fontWeight: 700 }} />;
+        return <Chip icon={<ScrapIcon sx={{ fontSize: '13px !important' }} />} label="Scrap" size="small" sx={{ bgcolor: 'rgba(100, 116, 139, 0.2)', color: isDark ? '#cbd5e1' : '#475569', fontWeight: 700 }} />;
       default:
         return <Chip label={cond} size="small" />;
     }
@@ -551,30 +596,67 @@ export const InventoryManagement: React.FC = () => {
   };
 
   return (
-    <Box sx={{ p: { xs: 1.5, sm: 3 } }}>
+    <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3 }, pb: { xs: 10, sm: 6 } }}>
       {/* HEADER BANNER */}
-      <Box sx={{ mb: 3, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 2 }}>
+      <Box sx={{ mb: 2.5, display: 'flex', flexDirection: { xs: 'column', md: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', md: 'center' }, gap: 1.5 }}>
         <Box>
-          <Typography variant="h5" sx={{ fontWeight: 800, color: isDark ? '#00ff66' : '#1a237e', display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <InventoryIcon sx={{ fontSize: 32 }} />
-            Master Barang
-          </Typography>
-          <Typography variant="body2" sx={{ color: isDark ? '#94a3b8' : '#64748b', mt: 0.5 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+            <Typography variant="h5" sx={{ fontWeight: 800, color: isDark ? '#00ff66' : '#1a237e', display: 'flex', alignItems: 'center', gap: 1, fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>
+              <InventoryIcon sx={{ fontSize: { xs: 26, sm: 30 } }} />
+              Master Barang
+            </Typography>
+            {/* ANDROID / MOBILE BADGE */}
+            {(isMobile || isAndroid) && (
+              <Chip
+                icon={<AndroidIcon sx={{ fontSize: '14px !important', color: '#10b981 !important' }} />}
+                label="Android Mode"
+                size="small"
+                sx={{
+                  bgcolor: isDark ? 'rgba(16, 185, 129, 0.15)' : 'rgba(16, 185, 129, 0.1)',
+                  color: '#10b981',
+                  fontWeight: 700,
+                  fontSize: '0.72rem',
+                  border: '1px solid rgba(16, 185, 129, 0.3)',
+                }}
+              />
+            )}
+          </Box>
+          <Typography variant="body2" sx={{ color: isDark ? '#94a3b8' : '#64748b', mt: 0.5, fontSize: { xs: '0.8rem', sm: '0.875rem' } }}>
             Pencatatan inventaris barang, lokasi barang, dan PIC penanggung jawab terkait (EMCC, PLANT, Workshop, dll.)
           </Typography>
         </Box>
 
-        {/* Action Buttons Top */}
-        <Stack direction="row" spacing={1.5} flexWrap="wrap">
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
+        {/* Action Controls: Refresh, View Mode Toggle, Tambah */}
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap">
+          {/* Toggle View Mode: Card (Mobile) vs Table (Spreadsheet) */}
+          <Tooltip title={viewMode === 'card' ? 'Tampilan Kartu (Optimal Android) — Klik untuk mode tabel' : 'Tampilan Tabel — Klik untuk mode kartu'}>
+            <Button
+              variant={viewMode === 'card' ? 'contained' : 'outlined'}
+              size="small"
+              color="inherit"
+              startIcon={viewMode === 'card' ? <ViewCardIcon fontSize="small" /> : <ViewListIcon fontSize="small" />}
+              onClick={() => setViewMode(viewMode === 'card' ? 'table' : 'card')}
+              sx={{
+                fontWeight: 700,
+                fontSize: '0.78rem',
+                borderRadius: 2,
+                bgcolor: viewMode === 'card' ? (isDark ? '#1e293b' : '#e2e8f0') : 'transparent',
+              }}
+            >
+              {viewMode === 'card' ? 'Mode Kartu' : 'Mode Tabel'}
+            </Button>
+          </Tooltip>
+
+          <IconButton
+            size="small"
+            color="primary"
             onClick={() => { fetchItems(); fetchMasterData(); }}
-            sx={{ fontWeight: 700 }}
+            sx={{ border: isDark ? '1px solid #334155' : '1px solid #cbd5e1', borderRadius: 2 }}
           >
-            Refresh
-          </Button>
-          {!isClient && (
+            <RefreshIcon fontSize="small" />
+          </IconButton>
+
+          {!isClient && !isMobile && (
             <Button
               variant="contained"
               color="primary"
@@ -587,7 +669,7 @@ export const InventoryManagement: React.FC = () => {
                 '&:hover': { bgcolor: isDark ? '#00cc52' : '#283593' },
               }}
             >
-              Tambah Master Barang
+              Tambah Barang
             </Button>
           )}
         </Stack>
@@ -595,207 +677,422 @@ export const InventoryManagement: React.FC = () => {
 
       {/* ALERT FEEDBACK */}
       {feedback && (
-        <Alert severity={feedback.type} sx={{ mb: 2.5 }} onClose={() => setFeedback(null)}>
+        <Alert severity={feedback.type} sx={{ mb: 2 }} onClose={() => setFeedback(null)}>
           {feedback.message}
         </Alert>
       )}
 
-      {/* KPI SUMMARY CARDS */}
-      <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={6} sm={4} md={2.4}>
-          <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Total Barang
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? '#f8fafc' : '#1a237e', mt: 0.5 }}>
-                {summary.total_items}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
-          <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="caption" sx={{ color: isDark ? '#00ff66' : '#0284c7', fontWeight: 700, textTransform: 'uppercase' }}>
-                Di Ruang IT
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? '#00ff66' : '#0284c7', mt: 0.5 }}>
-                {summary.in_stock_count}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={4} md={2.4}>
-          <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Di Lapangan / PIC
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#f59e0b', mt: 0.5 }}>
-                {summary.deployed_count}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={2.4}>
-          <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 700, textTransform: 'uppercase' }}>
-                Kondisi Rusak
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: '#ef4444', mt: 0.5 }}>
-                {summary.damaged_count}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={6} sm={6} md={2.4}>
-          <Card sx={{ bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-            <CardContent sx={{ p: 2, '&:last-child': { pb: 2 } }}>
-              <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>
-                Scrap / Hilang
-              </Typography>
-              <Typography variant="h4" sx={{ fontWeight: 800, color: isDark ? '#cbd5e1' : '#64748b', mt: 0.5 }}>
-                {Number(summary.lost_count) + Number(summary.scrap_count)}
-              </Typography>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
+      {/* KPI SUMMARY CARDS: Swipeable on Mobile Android, Grid on Desktop */}
+      <Box
+        sx={{
+          mb: 2.5,
+          display: 'flex',
+          gap: 1.5,
+          overflowX: 'auto',
+          pb: 1,
+          '&::-webkit-scrollbar': { height: '4px' },
+          '&::-webkit-scrollbar-thumb': { bgcolor: isDark ? '#334155' : '#cbd5e1', borderRadius: 2 },
+        }}
+      >
+        <Card sx={{ minWidth: { xs: 130, sm: 160 }, flex: '1 0 auto', bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', p: 1.5 }}>
+          <Typography variant="caption" sx={{ color: isDark ? '#94a3b8' : '#64748b', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+            Total Barang
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: isDark ? '#f8fafc' : '#1a237e', mt: 0.3 }}>
+            {summary.total_items}
+          </Typography>
+        </Card>
+        <Card sx={{ minWidth: { xs: 130, sm: 160 }, flex: '1 0 auto', bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', p: 1.5 }}>
+          <Typography variant="caption" sx={{ color: isDark ? '#00ff66' : '#0284c7', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+            Di Ruang IT
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: isDark ? '#00ff66' : '#0284c7', mt: 0.3 }}>
+            {summary.in_stock_count}
+          </Typography>
+        </Card>
+        <Card sx={{ minWidth: { xs: 130, sm: 160 }, flex: '1 0 auto', bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', p: 1.5 }}>
+          <Typography variant="caption" sx={{ color: '#f59e0b', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+            Di Lapangan / PIC
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: '#f59e0b', mt: 0.3 }}>
+            {summary.deployed_count}
+          </Typography>
+        </Card>
+        <Card sx={{ minWidth: { xs: 130, sm: 160 }, flex: '1 0 auto', bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', p: 1.5 }}>
+          <Typography variant="caption" sx={{ color: '#ef4444', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+            Kondisi Rusak
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: '#ef4444', mt: 0.3 }}>
+            {summary.damaged_count}
+          </Typography>
+        </Card>
+        <Card sx={{ minWidth: { xs: 130, sm: 160 }, flex: '1 0 auto', bgcolor: isDark ? '#0f172a' : '#ffffff', borderRadius: 2.5, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0', p: 1.5 }}>
+          <Typography variant="caption" sx={{ color: isDark ? '#cbd5e1' : '#64748b', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.7rem' }}>
+            Scrap / Hilang
+          </Typography>
+          <Typography variant="h5" sx={{ fontWeight: 800, color: isDark ? '#cbd5e1' : '#64748b', mt: 0.3 }}>
+            {Number(summary.lost_count) + Number(summary.scrap_count)}
+          </Typography>
+        </Card>
+      </Box>
 
       {/* NAVIGATION TABS (Master Barang | Master Data Dropdown) */}
-      <Paper sx={{ mb: 3, borderRadius: 2.5, bgcolor: isDark ? '#0f172a' : '#ffffff' }}>
+      <Paper sx={{ mb: 2.5, borderRadius: 2.5, bgcolor: isDark ? '#0f172a' : '#ffffff' }}>
         <Tabs
           value={activeTab}
           onChange={handleTabChange}
           indicatorColor="primary"
           textColor="primary"
+          variant="scrollable"
+          scrollButtons="auto"
           sx={{
-            px: 2,
+            px: { xs: 1, sm: 2 },
             borderBottom: 1,
             borderColor: isDark ? '#1e293b' : '#e2e8f0',
-            '& .MuiTab-root': { fontWeight: 700, minHeight: 48, fontSize: '0.9rem' },
+            '& .MuiTab-root': { fontWeight: 700, minHeight: 46, fontSize: { xs: '0.85rem', sm: '0.9rem' } },
           }}
         >
           <Tab icon={<InventoryIcon fontSize="small" />} iconPosition="start" label="Daftar Master Barang" />
-          {!isClient && <Tab icon={<SettingsIcon fontSize="small" />} iconPosition="start" label="Master Data Dropdown (Lokasi, PIC, Jenis, Merk/Tipe)" />}
+          {!isClient && <Tab icon={<SettingsIcon fontSize="small" />} iconPosition="start" label="Master Data Dropdown (Lokasi, PIC, dll)" />}
         </Tabs>
 
         {/* ========================================================
-            TAB 0: MASTER BARANG
+            TAB 0: MASTER BARANG (MOBILE CARDS / DESKTOP TABLE)
         ======================================================== */}
         {activeTab === 0 && (
-          <Box sx={{ p: 2.5 }}>
-            {/* Search and Filters */}
-            <Grid container spacing={1.5} sx={{ mb: 2.5 }}>
-              <Grid item xs={12} md={3.6}>
-                <TextField
-                  fullWidth
-                  size="small"
-                  placeholder="Cari ID, nama, SN, PIC..."
-                  value={searchItem}
-                  onChange={(e) => setSearchItem(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') fetchItems(); }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon fontSize="small" />
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-              </Grid>
-              <Grid item xs={6} sm={4} md={2.1}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Lokasi Barang</InputLabel>
-                  <Select value={filterLocation} label="Lokasi Barang" onChange={(e) => setFilterLocation(e.target.value)}>
-                    <MenuItem value="all">Semua Lokasi</MenuItem>
-                    {locations.map((loc) => (
-                      <MenuItem key={loc.id} value={String(loc.id)}>{loc.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6} sm={4} md={2.1}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Jenis Barang</InputLabel>
-                  <Select value={filterCategory} label="Jenis Barang" onChange={(e) => setFilterCategory(e.target.value)}>
-                    <MenuItem value="all">Semua Jenis</MenuItem>
-                    {categories.map((c) => (
-                      <MenuItem key={c.id} value={String(c.id)}>{c.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6} sm={4} md={2.1}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Merk</InputLabel>
-                  <Select value={filterBrand} label="Merk" onChange={(e) => setFilterBrand(e.target.value)}>
-                    <MenuItem value="all">Semua Merk</MenuItem>
-                    {brands.map((b) => (
-                      <MenuItem key={b.id} value={String(b.id)}>{b.name}</MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={6} sm={4} md={2.1}>
-                <FormControl fullWidth size="small">
-                  <InputLabel>Kondisi</InputLabel>
-                  <Select value={filterCondition} label="Kondisi" onChange={(e) => setFilterCondition(e.target.value)}>
-                    <MenuItem value="all">Semua Kondisi</MenuItem>
-                    <MenuItem value="Baik">Baik</MenuItem>
-                    <MenuItem value="Rusak">Rusak</MenuItem>
-                    <MenuItem value="Hilang">Hilang</MenuItem>
-                    <MenuItem value="Scrap">Scrap</MenuItem>
-                  </Select>
-                </FormControl>
-              </Grid>
-            </Grid>
+          <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
+            {/* Search Input Bar */}
+            <Box sx={{ mb: 1.5 }}>
+              <TextField
+                fullWidth
+                size="small"
+                placeholder="Cari ID, nama, serial number, atau PIC..."
+                value={searchItem}
+                onChange={(e) => setSearchItem(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') fetchItems(); }}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon fontSize="small" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchItem && (
+                    <InputAdornment position="end">
+                      <IconButton size="small" onClick={() => { setSearchItem(''); fetchItems(); }}>
+                        <CloseIcon fontSize="small" />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+            </Box>
 
-            {/* Master Items Table */}
-            <TableContainer sx={{ borderRadius: 2, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
-              <Table size="small">
-                <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>ID BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>NAMA BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>SERIAL NUMBER</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>JENIS</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>MERK & TIPE</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>LOKASI BARANG</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>PIC TERKAIT</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>TGL MASUK</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>TGL UPDATE</TableCell>
-                    <TableCell sx={{ fontWeight: 800 }}>KONDISI</TableCell>
-                    <TableCell align="center" sx={{ fontWeight: 800 }}>AKSI</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {loadingItems ? (
+            {/* Quick Horizontal Filter Chips (Ideal for Android Touch) */}
+            <Box
+              sx={{
+                display: 'flex',
+                gap: 1,
+                overflowX: 'auto',
+                pb: 1,
+                mb: 2,
+                '&::-webkit-scrollbar': { display: 'none' },
+                scrollbarWidth: 'none',
+              }}
+            >
+              <Chip
+                label="Semua Lokasi"
+                clickable
+                color={filterLocation === 'all' ? 'primary' : 'default'}
+                onClick={() => setFilterLocation('all')}
+                sx={{ fontWeight: 700, borderRadius: 2, fontSize: '0.78rem' }}
+              />
+              {locations.map((loc) => (
+                <Chip
+                  key={loc.id}
+                  icon={<LocationIcon sx={{ fontSize: '14px !important' }} />}
+                  label={loc.name}
+                  clickable
+                  color={filterLocation === String(loc.id) ? 'primary' : 'default'}
+                  onClick={() => setFilterLocation(filterLocation === String(loc.id) ? 'all' : String(loc.id))}
+                  sx={{ fontWeight: 700, borderRadius: 2, fontSize: '0.78rem' }}
+                />
+              ))}
+              <Chip
+                icon={<WarningIcon sx={{ fontSize: '14px !important' }} />}
+                label="Kondisi Rusak"
+                clickable
+                color={filterCondition === 'Rusak' ? 'warning' : 'default'}
+                onClick={() => setFilterCondition(filterCondition === 'Rusak' ? 'all' : 'Rusak')}
+                sx={{ fontWeight: 700, borderRadius: 2, fontSize: '0.78rem' }}
+              />
+              <Chip
+                icon={<FilterIcon sx={{ fontSize: '14px !important' }} />}
+                label={showFilterDrawer ? 'Tutup Filter' : 'Filter Lengkap'}
+                clickable
+                variant="outlined"
+                onClick={() => setShowFilterDrawer(!showFilterDrawer)}
+                sx={{ fontWeight: 700, borderRadius: 2, fontSize: '0.78rem' }}
+              />
+            </Box>
+
+            {/* Detailed Filter Section (Collapsible) */}
+            {showFilterDrawer && (
+              <Paper sx={{ p: 2, mb: 2.5, bgcolor: isDark ? '#1e293b' : '#f8fafc', borderRadius: 2, border: isDark ? '1px solid #334155' : '1px solid #e2e8f0' }}>
+                <Grid container spacing={1.5}>
+                  <Grid item xs={6} sm={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Jenis Barang</InputLabel>
+                      <Select value={filterCategory} label="Jenis Barang" onChange={(e) => setFilterCategory(e.target.value)}>
+                        <MenuItem value="all">Semua Jenis</MenuItem>
+                        {categories.map((c) => (
+                          <MenuItem key={c.id} value={String(c.id)}>{c.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Merk</InputLabel>
+                      <Select value={filterBrand} label="Merk" onChange={(e) => setFilterBrand(e.target.value)}>
+                        <MenuItem value="all">Semua Merk</MenuItem>
+                        {brands.map((b) => (
+                          <MenuItem key={b.id} value={String(b.id)}>{b.name}</MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={6} sm={3}>
+                    <FormControl fullWidth size="small">
+                      <InputLabel>Kondisi</InputLabel>
+                      <Select value={filterCondition} label="Kondisi" onChange={(e) => setFilterCondition(e.target.value)}>
+                        <MenuItem value="all">Semua Kondisi</MenuItem>
+                        <MenuItem value="Baik">Baik</MenuItem>
+                        <MenuItem value="Rusak">Rusak</MenuItem>
+                        <MenuItem value="Hilang">Hilang</MenuItem>
+                        <MenuItem value="Scrap">Scrap</MenuItem>
+                      </Select>
+                    </FormControl>
+                  </Grid>
+                  <Grid item xs={6} sm={3} sx={{ display: 'flex', alignItems: 'center' }}>
+                    <Button
+                      fullWidth
+                      size="small"
+                      variant="outlined"
+                      onClick={() => {
+                        setFilterLocation('all');
+                        setFilterCategory('all');
+                        setFilterBrand('all');
+                        setFilterCondition('all');
+                        setSearchItem('');
+                      }}
+                      sx={{ fontWeight: 700 }}
+                    >
+                      Reset Filter
+                    </Button>
+                  </Grid>
+                </Grid>
+              </Paper>
+            )}
+
+            {/* CONTENT AREA: CARD VIEW (ANDROID / MOBILE) VS SPREADSHEET TABLE (DESKTOP) */}
+            {loadingItems ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <CircularProgress size={36} />
+                <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
+                  Memuat data inventaris...
+                </Typography>
+              </Box>
+            ) : items.length === 0 ? (
+              <Box sx={{ py: 6, textAlign: 'center' }}>
+                <InventoryIcon sx={{ fontSize: 48, color: '#94a3b8', mb: 1 }} />
+                <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                  Belum ada data barang ditemukan
+                </Typography>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Klik tombol "+ Tambah Barang" untuk mendaftarkan barang baru.
+                </Typography>
+              </Box>
+            ) : viewMode === 'card' ? (
+              /* ========================================================
+                  ANDROID MOBILE CARD LIST
+              ======================================================== */
+              <Grid container spacing={2}>
+                {items.map((item, idx) => (
+                  <Grid item xs={12} sm={6} lg={4} key={item.id}>
+                    <Card
+                      sx={{
+                        p: 2,
+                        borderRadius: 3,
+                        border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0',
+                        bgcolor: isDark ? '#0f172a' : '#ffffff',
+                        boxShadow: isDark ? '0 4px 14px rgba(0,0,0,0.4)' : '0 2px 10px rgba(0,0,0,0.04)',
+                        transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+                        '&:hover': {
+                          boxShadow: isDark ? '0 6px 20px rgba(0,0,0,0.6)' : '0 4px 16px rgba(0,0,0,0.08)',
+                        },
+                      }}
+                    >
+                      {/* Top Header Row: NO, ID Barang Badge, Condition Badge */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.2 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 800 }}>
+                            #{(pageItem - 1) * 25 + idx + 1}
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontFamily: 'monospace',
+                              fontWeight: 800,
+                              fontSize: '0.85rem',
+                              color: isDark ? '#00ff66' : '#1a237e',
+                              bgcolor: isDark ? 'rgba(0,255,102,0.1)' : 'rgba(26,35,126,0.08)',
+                              px: 1,
+                              py: 0.3,
+                              borderRadius: 1.5,
+                            }}
+                          >
+                            {item.item_code}
+                          </Typography>
+                          <Chip label={item.category?.name || 'Umum'} size="small" sx={{ fontSize: '0.7rem', height: 22 }} />
+                        </Box>
+                        {renderConditionChip(item.condition_status)}
+                      </Box>
+
+                      {/* Item Name */}
+                      <Typography variant="subtitle1" sx={{ fontWeight: 800, fontSize: '1.05rem', color: 'text.primary', mb: 0.5 }}>
+                        {item.name}
+                      </Typography>
+
+                      {/* Brand, Type, Serial Number */}
+                      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                        {(item.brand?.name || item.type?.name) && (
+                          <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary', fontSize: '0.8rem' }}>
+                            🏷️ {item.brand?.name} {item.type?.name ? `• ${item.type.name}` : ''}
+                          </Typography>
+                        )}
+                        {item.serial_number && (
+                          <Tooltip title="Klik untuk salin Serial Number">
+                            <Chip
+                              icon={<CopyIcon sx={{ fontSize: '13px !important' }} />}
+                              label={`SN: ${item.serial_number}`}
+                              size="small"
+                              onClick={() => {
+                                navigator.clipboard.writeText(item.serial_number!);
+                                setFeedback({ type: 'success', message: `Serial Number ${item.serial_number} berhasil disalin!` });
+                              }}
+                              sx={{ fontFamily: 'monospace', fontSize: '0.75rem', cursor: 'pointer', height: 24 }}
+                            />
+                          </Tooltip>
+                        )}
+                      </Box>
+
+                      {/* Location and PIC Callout Box (Field-Ready Highlight) */}
+                      <Box
+                        sx={{
+                          p: 1.5,
+                          borderRadius: 2,
+                          bgcolor: isDark ? 'rgba(255,255,255,0.04)' : '#f8fafc',
+                          border: isDark ? '1px solid rgba(255,255,255,0.08)' : '1px solid #edf2f7',
+                          mb: 1.5,
+                        }}
+                      >
+                        <Grid container spacing={1}>
+                          <Grid item xs={6}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <LocationIcon sx={{ fontSize: 14, color: '#3b82f6' }} /> LOKASI
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: isDark ? '#60a5fa' : '#2563eb', mt: 0.2 }}>
+                              {item.current_location?.name || 'Ruang IT'}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                              <PersonIcon sx={{ fontSize: 14, color: '#f59e0b' }} /> PIC TERKAIT
+                            </Typography>
+                            <Typography variant="body2" sx={{ fontWeight: 800, color: isDark ? '#fbbf24' : '#d97706', mt: 0.2 }}>
+                              {item.current_pic?.name ? item.current_pic.name : '- (Ruang IT)'}
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                      </Box>
+
+                      {/* Timestamps Row */}
+                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5, px: 0.5 }}>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem' }}>
+                          📅 Masuk: <strong>{formatDate(item.entry_date)}</strong>
+                        </Typography>
+                        <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.72rem', display: 'flex', alignItems: 'center', gap: 0.3 }}>
+                          <TimeIcon sx={{ fontSize: 12 }} /> Update: <strong>{formatDate(item.last_update_date, true)}</strong>
+                        </Typography>
+                      </Box>
+
+                      {/* Mobile Touch Action Buttons (Big, easy to tap with thumb) */}
+                      <Divider sx={{ mb: 1.2 }} />
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          size="medium"
+                          startIcon={<EditIcon />}
+                          onClick={() => handleOpenEditItem(item)}
+                          sx={{
+                            py: 1,
+                            borderRadius: 2,
+                            fontWeight: 700,
+                            fontSize: '0.85rem',
+                            bgcolor: isDark ? '#00ff66' : '#1a237e',
+                            color: isDark ? '#0a1220' : '#ffffff',
+                            '&:hover': { bgcolor: isDark ? '#00cc52' : '#283593' },
+                          }}
+                        >
+                          Edit / Pindah PIC
+                        </Button>
+                        <IconButton
+                          size="medium"
+                          color="info"
+                          onClick={() => handleOpenDetail(item)}
+                          sx={{ border: isDark ? '1px solid #334155' : '1px solid #cbd5e1', borderRadius: 2, width: 44, height: 44 }}
+                        >
+                          <ViewIcon />
+                        </IconButton>
+                        {!isClient && (
+                          <IconButton
+                            size="medium"
+                            color="error"
+                            onClick={() => setDeleteItemDialog({ open: true, item })}
+                            sx={{ border: isDark ? '1px solid #334155' : '1px solid #cbd5e1', borderRadius: 2, width: 44, height: 44 }}
+                          >
+                            <DeleteIcon />
+                          </IconButton>
+                        )}
+                      </Box>
+                    </Card>
+                  </Grid>
+                ))}
+              </Grid>
+            ) : (
+              /* ========================================================
+                  DESKTOP SPREADSHEET TABLE VIEW
+              ======================================================== */
+              <TableContainer sx={{ borderRadius: 2, border: isDark ? '1px solid #1e293b' : '1px solid #e2e8f0' }}>
+                <Table size="small">
+                  <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
                     <TableRow>
-                      <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
-                        <CircularProgress size={36} />
-                        <Typography variant="body2" sx={{ mt: 1, color: 'text.secondary' }}>
-                          Memuat data inventaris...
-                        </Typography>
-                      </TableCell>
+                      <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>ID BARANG</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>NAMA BARANG</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>SERIAL NUMBER</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>JENIS</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>MERK & TIPE</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>LOKASI BARANG</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>PIC TERKAIT</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>TGL MASUK</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>TGL UPDATE</TableCell>
+                      <TableCell sx={{ fontWeight: 800 }}>KONDISI</TableCell>
+                      <TableCell align="center" sx={{ fontWeight: 800 }}>AKSI</TableCell>
                     </TableRow>
-                  ) : items.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={12} align="center" sx={{ py: 6 }}>
-                        <InventoryIcon sx={{ fontSize: 48, color: '#94a3b8', mb: 1 }} />
-                        <Typography variant="body1" sx={{ fontWeight: 600, color: 'text.secondary' }}>
-                          Belum ada data barang ditemukan
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                          Klik "Tambah Master Barang" untuk mendaftarkan barang baru.
-                        </Typography>
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    items.map((item, idx) => (
+                  </TableHead>
+                  <TableBody>
+                    {items.map((item, idx) => (
                       <TableRow key={item.id} hover sx={{ '&:hover': { bgcolor: isDark ? '#1e293b' : '#f8fafc' } }}>
                         <TableCell align="center" sx={{ fontWeight: 700, color: 'text.secondary' }}>
                           {(pageItem - 1) * 25 + idx + 1}
@@ -871,21 +1168,21 @@ export const InventoryManagement: React.FC = () => {
                           </Stack>
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                    ))}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            )}
 
             {/* Pagination */}
             {totalPagesItem > 1 && (
-              <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2.5 }}>
                 <Pagination
                   count={totalPagesItem}
                   page={pageItem}
                   onChange={(_, p) => setPageItem(p)}
                   color="primary"
-                  size="small"
+                  size={isMobile ? 'small' : 'medium'}
                 />
               </Box>
             )}
@@ -896,9 +1193,9 @@ export const InventoryManagement: React.FC = () => {
             TAB 1: KELOLA MASTER DROPDOWN (Lokasi & PIC, Jenis, Merk/Tipe)
         ======================================================== */}
         {activeTab === 1 && !isClient && (
-          <Box sx={{ p: 2.5 }}>
+          <Box sx={{ p: { xs: 1.5, sm: 2.5 } }}>
             <Box sx={{ mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary' }}>
+              <Typography variant="h6" sx={{ fontWeight: 800, color: 'text.primary', fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                 Kelola Data Master Dropdown
               </Typography>
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
@@ -909,11 +1206,13 @@ export const InventoryManagement: React.FC = () => {
             <Tabs
               value={masterSubTab}
               onChange={(_, v) => setMasterSubTab(v)}
+              variant="scrollable"
+              scrollButtons="auto"
               sx={{ mb: 2.5, borderBottom: 1, borderColor: isDark ? '#1e293b' : '#e2e8f0' }}
             >
-              <Tab icon={<LocationIcon fontSize="small" />} iconPosition="start" label="1. Master Lokasi Barang" />
+              <Tab icon={<LocationIcon fontSize="small" />} iconPosition="start" label="1. Master Lokasi" />
               <Tab icon={<PersonIcon fontSize="small" />} iconPosition="start" label="2. Master PIC (Terkait Lokasi)" />
-              <Tab icon={<CategoryIcon fontSize="small" />} iconPosition="start" label="3. Master Jenis Barang" />
+              <Tab icon={<CategoryIcon fontSize="small" />} iconPosition="start" label="3. Master Jenis" />
               <Tab icon={<BrandIcon fontSize="small" />} iconPosition="start" label="4. Master Merk & Tipe" />
             </Tabs>
 
@@ -930,7 +1229,7 @@ export const InventoryManagement: React.FC = () => {
                   <Table size="small">
                     <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 800, width: 60, textAlign: 'center' }}>NO.</TableCell>
+                        <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>NAMA LOKASI</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>KETERANGAN</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>PIC TERDAFTAR</TableCell>
@@ -974,7 +1273,7 @@ export const InventoryManagement: React.FC = () => {
             {/* SUB-TAB 1: PIC TERKAIT LOKASI */}
             {masterSubTab === 1 && (
               <Box>
-                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 1 }}>
                   <Box>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Daftar PIC (Person In Charge)</Typography>
                     <Typography variant="caption" sx={{ color: 'text.secondary' }}>
@@ -989,7 +1288,7 @@ export const InventoryManagement: React.FC = () => {
                   <Table size="small">
                     <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 800, width: 60, textAlign: 'center' }}>NO.</TableCell>
+                        <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>NAMA PIC</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>LOKASI TERKAIT</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>NO TELEPON / WA</TableCell>
@@ -1036,7 +1335,7 @@ export const InventoryManagement: React.FC = () => {
                   <Table size="small">
                     <TableHead sx={{ bgcolor: isDark ? '#1e293b' : '#f8fafc' }}>
                       <TableRow>
-                        <TableCell sx={{ fontWeight: 800, width: 60, textAlign: 'center' }}>NO.</TableCell>
+                        <TableCell sx={{ fontWeight: 800, width: 50, textAlign: 'center' }}>NO.</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>NAMA JENIS BARANG</TableCell>
                         <TableCell sx={{ fontWeight: 800 }}>DESKRIPSI</TableCell>
                         <TableCell align="center" sx={{ fontWeight: 800 }}>AKSI</TableCell>
@@ -1066,7 +1365,7 @@ export const InventoryManagement: React.FC = () => {
 
             {/* SUB-TAB 3: MERK & TIPE */}
             {masterSubTab === 3 && (
-              <Grid container spacing={3}>
+              <Grid container spacing={2}>
                 <Grid item xs={12} md={6}>
                   <Box sx={{ mb: 2, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Typography variant="subtitle1" sx={{ fontWeight: 700 }}>Master Merk</Typography>
@@ -1150,16 +1449,45 @@ export const InventoryManagement: React.FC = () => {
 
       {/* ========================================================
           MODAL: TAMBAH / EDIT MASTER BARANG
+          (ADAPTIVE: FULLSCREEN BOTTOM-SHEET ON ANDROID / MOBILE)
       ======================================================== */}
-      <Dialog open={openItemModal} onClose={() => setOpenItemModal(false)} maxWidth="md" fullWidth>
+      <Dialog
+        open={openItemModal}
+        onClose={() => setOpenItemModal(false)}
+        maxWidth="md"
+        fullWidth
+        fullScreen={isMobile}
+        TransitionComponent={isMobile ? Transition : undefined}
+      >
         <form onSubmit={handleSaveItem}>
-          <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            {editingItem ? `Edit Barang: ${editingItem.name}` : 'Tambah Master Barang Baru'}
-            <IconButton size="small" onClick={() => setOpenItemModal(false)}>
-              <CloseIcon />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent dividers>
+          {isMobile ? (
+            /* Mobile Android Top App Bar */
+            <AppBar sx={{ position: 'relative', bgcolor: isDark ? '#070d18' : '#1a237e' }}>
+              <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                  <IconButton edge="start" color="inherit" onClick={() => setOpenItemModal(false)}>
+                    <CloseIcon />
+                  </IconButton>
+                  <Typography sx={{ fontWeight: 800, fontSize: '1rem' }}>
+                    {editingItem ? 'Edit Barang' : 'Tambah Barang'}
+                  </Typography>
+                </Box>
+                <Button type="submit" variant="contained" disabled={savingItem} sx={{ bgcolor: isDark ? '#00ff66' : '#ffd600', color: '#0a1220', fontWeight: 800, px: 2.5 }}>
+                  {savingItem ? 'Simpan...' : 'Simpan'}
+                </Button>
+              </Toolbar>
+            </AppBar>
+          ) : (
+            /* Desktop Dialog Title */
+            <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              {editingItem ? `Edit Barang: ${editingItem.name}` : 'Tambah Master Barang Baru'}
+              <IconButton size="small" onClick={() => setOpenItemModal(false)}>
+                <CloseIcon />
+              </IconButton>
+            </DialogTitle>
+          )}
+
+          <DialogContent dividers sx={{ p: { xs: 2, sm: 3 } }}>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -1172,7 +1500,7 @@ export const InventoryManagement: React.FC = () => {
                   InputProps={{
                     endAdornment: !editingItem && (
                       <InputAdornment position="end">
-                        <Button size="small" onClick={handleGenerateCode} disabled={generatingCode}>
+                        <Button size="small" onClick={handleGenerateCode} disabled={generatingCode} sx={{ fontWeight: 700 }}>
                           Auto
                         </Button>
                       </InputAdornment>
@@ -1195,7 +1523,7 @@ export const InventoryManagement: React.FC = () => {
                 <TextField
                   fullWidth
                   label="Serial Number (SN)"
-                  placeholder="SN / Nomor Seri pabrikan"
+                  placeholder="Nomor Seri / SN pabrikan"
                   value={itemForm.serial_number}
                   onChange={(e) => setItemForm({ ...itemForm, serial_number: e.target.value })}
                 />
@@ -1250,6 +1578,7 @@ export const InventoryManagement: React.FC = () => {
                 </FormControl>
               </Grid>
 
+              {/* LOKASI BARANG */}
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth required>
                   <InputLabel>Lokasi Barang</InputLabel>
@@ -1272,7 +1601,7 @@ export const InventoryManagement: React.FC = () => {
                 </FormControl>
               </Grid>
 
-              {/* DYNAMIC PIC DROPDOWN: Bound to Location */}
+              {/* DYNAMIC PIC DROPDOWN: Filtered by Location */}
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth disabled={!itemForm.current_location_id}>
                   <InputLabel>PIC Terkait (Otomatis Filter Lokasi)</InputLabel>
@@ -1341,26 +1670,48 @@ export const InventoryManagement: React.FC = () => {
               </Grid>
             </Grid>
           </DialogContent>
-          <DialogActions sx={{ p: 2 }}>
-            <Button onClick={() => setOpenItemModal(false)}>Batal</Button>
-            <Button type="submit" variant="contained" disabled={savingItem} sx={{ fontWeight: 700 }}>
-              {savingItem ? 'Menyimpan...' : editingItem ? 'Simpan Perubahan' : 'Daftarkan Barang'}
-            </Button>
-          </DialogActions>
+
+          {!isMobile && (
+            <DialogActions sx={{ p: 2 }}>
+              <Button onClick={() => setOpenItemModal(false)}>Batal</Button>
+              <Button type="submit" variant="contained" disabled={savingItem} sx={{ fontWeight: 700 }}>
+                {savingItem ? 'Menyimpan...' : editingItem ? 'Simpan Perubahan' : 'Daftarkan Barang'}
+              </Button>
+            </DialogActions>
+          )}
         </form>
       </Dialog>
 
       {/* ========================================================
-          MODAL: DETAIL BARANG
+          MODAL: DETAIL BARANG (ADAPTIVE MOBILE FULLSCREEN)
       ======================================================== */}
-      <Dialog open={detailModalOpen} onClose={() => setDetailModalOpen(false)} maxWidth="sm" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          Detail Barang
-          <IconButton size="small" onClick={() => setDetailModalOpen(false)}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        <DialogContent dividers>
+      <Dialog
+        open={detailModalOpen}
+        onClose={() => setDetailModalOpen(false)}
+        maxWidth="sm"
+        fullWidth
+        fullScreen={isMobile}
+        TransitionComponent={isMobile ? Transition : undefined}
+      >
+        {isMobile ? (
+          <AppBar sx={{ position: 'relative', bgcolor: isDark ? '#070d18' : '#1a237e' }}>
+            <Toolbar sx={{ justifyContent: 'space-between', px: 2 }}>
+              <Typography sx={{ fontWeight: 800 }}>Detail Barang</Typography>
+              <IconButton edge="end" color="inherit" onClick={() => setDetailModalOpen(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Toolbar>
+          </AppBar>
+        ) : (
+          <DialogTitle sx={{ fontWeight: 800, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            Detail Barang
+            <IconButton size="small" onClick={() => setDetailModalOpen(false)}>
+              <CloseIcon />
+            </IconButton>
+          </DialogTitle>
+        )}
+
+        <DialogContent dividers sx={{ p: { xs: 2, sm: 3 } }}>
           {selectedItemDetail && (
             <Box>
               <Grid container spacing={2}>
@@ -1416,8 +1767,10 @@ export const InventoryManagement: React.FC = () => {
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDetailModalOpen(false)}>Tutup</Button>
+        <DialogActions sx={{ p: 2 }}>
+          <Button fullWidth={isMobile} variant="contained" onClick={() => setDetailModalOpen(false)}>
+            Tutup
+          </Button>
         </DialogActions>
       </Dialog>
 
@@ -1431,7 +1784,7 @@ export const InventoryManagement: React.FC = () => {
             Apakah Anda yakin ingin menghapus barang <strong>{deleteItemDialog.item?.name}</strong> (ID: {deleteItemDialog.item?.item_code})?
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setDeleteItemDialog({ open: false, item: null })}>Batal</Button>
           <Button color="error" variant="contained" onClick={handleDeleteItem} sx={{ fontWeight: 700 }}>
             Hapus Permanen
@@ -1465,7 +1818,7 @@ export const InventoryManagement: React.FC = () => {
               onChange={(e) => setLocForm({ ...locForm, description: e.target.value })}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenLocModal(false)}>Batal</Button>
             <Button type="submit" variant="contained" sx={{ fontWeight: 700 }}>Simpan</Button>
           </DialogActions>
@@ -1517,7 +1870,7 @@ export const InventoryManagement: React.FC = () => {
               onChange={(e) => setPicForm({ ...picForm, department: e.target.value })}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenPicModal(false)}>Batal</Button>
             <Button type="submit" variant="contained" sx={{ fontWeight: 700 }}>Simpan</Button>
           </DialogActions>
@@ -1549,7 +1902,7 @@ export const InventoryManagement: React.FC = () => {
               onChange={(e) => setCatForm({ ...catForm, description: e.target.value })}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenCatModal(false)}>Batal</Button>
             <Button type="submit" variant="contained" sx={{ fontWeight: 700 }}>Simpan</Button>
           </DialogActions>
@@ -1581,7 +1934,7 @@ export const InventoryManagement: React.FC = () => {
               onChange={(e) => setBrandForm({ ...brandForm, description: e.target.value })}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenBrandModal(false)}>Batal</Button>
             <Button type="submit" variant="contained" sx={{ fontWeight: 700 }}>Simpan</Button>
           </DialogActions>
@@ -1626,7 +1979,7 @@ export const InventoryManagement: React.FC = () => {
               onChange={(e) => setTypeForm({ ...typeForm, description: e.target.value })}
             />
           </DialogContent>
-          <DialogActions>
+          <DialogActions sx={{ p: 2 }}>
             <Button onClick={() => setOpenTypeModal(false)}>Batal</Button>
             <Button type="submit" variant="contained" sx={{ fontWeight: 700 }}>Simpan</Button>
           </DialogActions>
@@ -1643,13 +1996,36 @@ export const InventoryManagement: React.FC = () => {
             Apakah Anda yakin ingin menghapus data master <strong>{deleteMasterDialog.name}</strong>?
           </Typography>
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ p: 2 }}>
           <Button onClick={() => setDeleteMasterDialog({ open: false, type: 'location', id: 0, name: '' })}>Batal</Button>
           <Button color="error" variant="contained" onClick={handleDeleteMaster} sx={{ fontWeight: 700 }}>
             Hapus
           </Button>
         </DialogActions>
       </Dialog>
+
+      {/* ========================================================
+          ANDROID FLOATING ACTION BUTTON (FAB) FOR ONE-HAND USE
+      ======================================================== */}
+      {!isClient && (
+        <Fab
+          color="primary"
+          aria-label="tambah barang"
+          onClick={handleOpenAddItem}
+          sx={{
+            position: 'fixed',
+            bottom: { xs: 24, sm: 30 },
+            right: { xs: 20, sm: 30 },
+            zIndex: 1050,
+            bgcolor: isDark ? '#00ff66' : '#1a237e',
+            color: isDark ? '#0a1220' : '#ffffff',
+            boxShadow: '0 6px 20px rgba(0,0,0,0.35)',
+            '&:hover': { bgcolor: isDark ? '#00cc52' : '#283593' },
+          }}
+        >
+          <AddIcon sx={{ fontSize: 28 }} />
+        </Fab>
+      )}
     </Box>
   );
 };
