@@ -293,4 +293,108 @@ export interface UnitInspection {
   updated_at?: string;
 }
 
+// ==========================================
+// INVENTARIS BARANG (KELUAR MASUK BARANG)
+// ==========================================
+
+export interface InventoryLocation {
+  id: number;
+  name: string;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InventoryPic {
+  id: number;
+  name: string;
+  location_id?: number | null;
+  location?: InventoryLocation | null;
+  phone?: string | null;
+  department?: string | null;
+  status: 'active' | 'inactive';
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InventoryCategory {
+  id: number;
+  name: string;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InventoryBrand {
+  id: number;
+  name: string;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface InventoryType {
+  id: number;
+  name: string;
+  brand_id?: number | null;
+  brand?: InventoryBrand | null;
+  description?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export type ItemCondition = 'Baik' | 'Rusak' | 'Hilang' | 'Scrap';
+export type ItemStatus = 'in_stock' | 'deployed' | 'maintenance' | 'scrap';
+
+export interface InventoryItem {
+  id: number;
+  item_code: string; // IDBarang
+  name: string; // Nama Barang
+  serial_number?: string | null;
+  category_id?: number | null;
+  category?: InventoryCategory | null;
+  brand_id?: number | null;
+  brand?: InventoryBrand | null;
+  type_id?: number | null;
+  type?: InventoryType | null;
+  current_location_id?: number | null;
+  current_location?: InventoryLocation | null;
+  current_pic_id?: number | null;
+  current_pic?: InventoryPic | null;
+  condition_status: ItemCondition;
+  status: ItemStatus;
+  entry_date: string; // YYYY-MM-DD
+  last_update_date?: string | null; // TanggalUpdate
+  notes?: string | null;
+  photo_url?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TransactionType = 'masuk' | 'keluar' | 'mutasi' | 'kembali';
+
+export interface InventoryTransaction {
+  id: number;
+  item_id: number;
+  item?: InventoryItem;
+  transaction_type: TransactionType;
+  transaction_date: string;
+  from_location_id?: number | null;
+  from_location?: InventoryLocation | null;
+  to_location_id?: number | null;
+  to_location?: InventoryLocation | null;
+  from_pic_id?: number | null;
+  from_pic?: InventoryPic | null;
+  to_pic_id?: number | null;
+  to_pic?: InventoryPic | null;
+  condition_status: ItemCondition;
+  recipient_name?: string | null;
+  doc_number?: string | null;
+  notes?: string | null;
+  operator_id?: number | null;
+  operator_name?: string | null;
+  created_at: string;
+}
+
+
 

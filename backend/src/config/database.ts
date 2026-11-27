@@ -18,6 +18,13 @@ import { DashcamBrand } from '../models/DashcamBrand';
 import { InternetProvider } from '../models/InternetProvider';
 import { Problem } from '../models/Problem';
 import { UnitInspection } from '../models/UnitInspection';
+import { InventoryLocation } from '../models/InventoryLocation';
+import { InventoryPic } from '../models/InventoryPic';
+import { InventoryCategory } from '../models/InventoryCategory';
+import { InventoryBrand } from '../models/InventoryBrand';
+import { InventoryType } from '../models/InventoryType';
+import { InventoryItem } from '../models/InventoryItem';
+import { InventoryTransaction } from '../models/InventoryTransaction';
 
 dotenv.config();
 
@@ -48,6 +55,13 @@ export const AppDataSource = new DataSource({
     InternetProvider,
     Problem,
     UnitInspection,
+    InventoryLocation,
+    InventoryPic,
+    InventoryCategory,
+    InventoryBrand,
+    InventoryType,
+    InventoryItem,
+    InventoryTransaction,
   ],
 });
 

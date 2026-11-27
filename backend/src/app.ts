@@ -20,6 +20,7 @@ import dashcamBrandsRouter from './routes/dashcamBrands';
 import internetProvidersRouter from './routes/internetProviders';
 import problemsRouter from './routes/problems';
 import inspectionsRouter from './routes/inspections';
+import inventoryRouter from './routes/inventory';
 import { verifyToken } from './middleware/auth';
 
 const app = express();
@@ -56,6 +57,7 @@ app.use('/api/dashcam-brands', verifyToken, dashcamBrandsRouter);
 app.use('/api/internet-providers', verifyToken, internetProvidersRouter);
 app.use('/api/problems', problemsRouter);
 app.use('/api/inspections', inspectionsRouter);
+app.use('/api/inventory', inventoryRouter);
 app.use('/api/settings', settingRouter);
 app.use('/api/chat', verifyToken, chatRouter);
 

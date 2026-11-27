@@ -24,6 +24,7 @@ import DashcamManagement from './pages/DashcamManagement';
 import AppSettingsPage from './pages/AppSettings';
 import InspectionList from './pages/InspectionList';
 import InspectionCreate from './pages/InspectionCreate';
+import InventoryManagement from './pages/InventoryManagement';
 
 // Helper pengecekan role pengguna
 const getUserRole = (): 'admin' | 'it_support' | 'client' => {
@@ -113,6 +114,13 @@ export const App: React.FC = () => {
               {/* Inspeksi Unit (Radio Rig, Camera Cabin, Camera Fatigue) */}
               <Route path="/inspections" element={<StaffRoute element={<InspectionList />} />} />
               <Route path="/inspections/create" element={<StaffRoute element={<InspectionCreate />} />} />
+
+              {/* Inventaris: Master Barang, Barang Masuk, Barang Keluar */}
+              <Route path="/inventory" element={<StaffRoute element={<InventoryManagement />} />} />
+              <Route path="/inventory/items" element={<StaffRoute element={<InventoryManagement />} />} />
+              <Route path="/inventory/in" element={<StaffRoute element={<InventoryManagement />} />} />
+              <Route path="/inventory/out" element={<StaffRoute element={<InventoryManagement />} />} />
+              <Route path="/inventory/settings" element={<StaffRoute element={<InventoryManagement />} />} />
 
               {/* Master Data & Admin Routes */}
               <Route path="/users" element={<AdminRoute element={<UserManagement />} />} />
